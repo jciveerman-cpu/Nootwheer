@@ -1,0 +1,17 @@
+{
+  "name": "ttv-nootwheer-ladder",
+  "version": "1.0.0",
+  "description": "Laddercompetitie App voor TTV Het Nootwheer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.19.2",
+    "pg": "^8.13.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "competities": [
+    {
+      "id": "senioren-najaar-2026",
+      "naam": "Senioren Najaar 2026",
+      "type": "Senioren",
+      "afwezigheidRegel": "per-week",
+      "status": "Actief",
+      "huidigeWeek": 23
+    },
+    {
+      "id": "junioren-2026",
+      "naam": "Junioren 2026",
+      "type": "Jeugd",
+      "afwezigheidRegel": "per-week",
+      "status": "Actief",
+      "huidigeWeek": 23
+    }
+  ],
+  "beheerders": [
+    {
+      "username": "admin",
+      "password": "admin"
+    }
+  ],
+  "spelers": [
+    {
+      "id": "1",
+      "naam": "Jan Jansen",
+      "type": "Senioren",
+      "punten": 15,
+      "elo": 1620,
+      "actief": true
+    },
+    {
+      "id": "2",
+      "naam": "Piet de Vries",
+      "type": "Senioren",
+      "punten": 12,
+      "elo": 1580,
+      "actief": true
+    },
+    {
+      "id": "3",
+      "naam": "Henk Bakker",
+      "type": "Senioren",
+      "punten": 8,
+      "elo": 1490,
+      "actief": true
+    },
+    {
+      "id": "4",
+      "naam": "Klaas Smit",
+      "type": "Senioren",
+      "punten": 6,
+      "elo": 1450,
+      "actief": true
+    },
+    {
+      "id": "5",
+      "naam": "Rob Visser",
+      "type": "Senioren",
+      "punten": 2,
+      "elo": 1425,
+      "actief": true
+    },
+    {
+      "id": "6",
+      "naam": "Peter Kuiper",
+      "type": "Senioren",
+      "punten": -2,
+      "elo": 1400,
+      "actief": true
+    },
+    {
+      "id": "7",
+      "naam": "Tim Mulder",
+      "type": "Jeugd",
+      "punten": 1,
+      "elo": 1350,
+      "actief": true
+    },
+    {
+      "id": "s_1780726451864",
+      "naam": "Test 1",
+      "type": "Jeugd",
+      "punten": 0,
+      "elo": 500,
+      "actief": true
+    },
+    {
+      "id": "s_1780726460568",
+      "naam": "Test 2",
+      "type": "Jeugd",
+      "punten": -1,
+      "elo": 150,
+      "actief": true
+    }
+  ],
+  "wedstrijden": [
+    {
+      "id": "w_1780726519780",
+      "competitieId": "junioren-2026",
+      "week": 23,
+      "datum": "2026-06-06",
+      "spelerAId": "s_1780726451864",
+      "spelerBId": "s_1780726460568",
+      "sets": [
+        {
+          "a": 11,
+          "b": 6
+        },
+        {
+          "a": 11,
+          "b": 6
+        },
+        {
+          "a": 11,
+          "b": 6
+        }
+      ],
+      "uitslag": "3 - 0",
+      "setstanden": "11-6, 11-6, 11-6",
+      "winnaarId": "s_1780726451864",
+      "type": "Jeugd"
+    },
+    {
+      "id": "w_1780726478554",
+      "competitieId": "junioren-2026",
+      "week": 23,
+      "datum": "2026-06-06",
+      "spelerAId": "s_1780726451864",
+      "spelerBId": "7",
+      "sets": [
+        {
+          "a": 2,
+          "b": 11
+        },
+        {
+          "a": 3,
+          "b": 11
+        },
+        {
+          "a": 4,
+          "b": 11
+        }
+      ],
+      "uitslag": "0 - 3",
+      "setstanden": "2-11, 3-11, 4-11",
+      "winnaarId": "7",
+      "type": "Jeugd"
+    },
+    {
+      "id": "w_1780722294616",
+      "competitieId": "senioren-najaar-2026",
+      "week": 23,
+      "datum": "2026-06-06",
+      "spelerAId": "5",
+      "spelerBId": "1",
+      "sets": [
+        {
+          "a": 2,
+          "b": 11
+        },
+        {
+          "a": 11,
+          "b": 6
+        },
+        {
+          "a": 11,
+          "b": 6
+        },
+        {
+          "a": 2,
+          "b": 11
+        },
+        {
+          "a": 9,
+          "b": 11
+        }
+      ],
+      "uitslag": "2 - 3",
+      "setstanden": "2-11, 11-6, 11-6, 2-11, 9-11",
+      "winnaarId": "1",
+      "type": "Senioren"
+    },
+    {
+      "id": "w_1780721158627",
+      "competitieId": "senioren-najaar-2026",
+      "week": 23,
+      "datum": "2026-06-06",
+      "spelerAId": "1",
+      "spelerBId": "2",
+      "sets": [
+        {
+          "a": 2,
+          "b": 11
+        },
+        {
+          "a": 3,
+          "b": 11
+        },
+        {
+          "a": 3,
+          "b": 11
+        }
+      ],
+      "uitslag": "0 - 3",
+      "setstanden": "2-11, 3-11, 3-11",
+      "winnaarId": "2",
+      "type": "Senioren"
+    }
+  ],
+  "snapshots": {
+    "senioren-najaar-2026-w23": [
+      {
+        "spelerId": "1",
+        "positie": 1,
+        "elo": 1620,
+        "punten": 14
+      },
+      {
+        "spelerId": "2",
+        "positie": 2,
+        "elo": 1580,
+        "punten": 10
+      },
+      {
+        "spelerId": "3",
+        "positie": 3,
+        "elo": 1490,
+        "punten": 8
+      },
+      {
+        "spelerId": "4",
+        "positie": 4,
+        "elo": 1450,
+        "punten": 6
+      },
+      {
+        "spelerId": "5",
+        "positie": 5,
+        "elo": 1425,
+        "punten": 3
+      },
+      {
+        "spelerId": "6",
+        "positie": 6,
+        "elo": 1400,
+        "punten": -2
+      }
+    ],
+    "junioren-2026-w23": [
+      {
+        "spelerId": "7",
+        "positie": 1,
+        "elo": 1350,
+        "punten": 0
+      },
+      {
+        "spelerId": "s_1780726451864",
+        "positie": 2,
+        "elo": 500,
+        "punten": 0
+      },
+      {
+        "spelerId": "s_1780726460568",
+        "positie": 3,
+        "elo": 150,
+        "punten": 0
+      }
+    ]
+  },
+  "aanwezigheid": {},
+  "spelerLogin": {
+    "username": "speler",
+    "password": "speler"
+  }
+}
