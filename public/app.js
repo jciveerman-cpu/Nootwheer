@@ -517,7 +517,7 @@ function bouwWedstrijdRij(w) {
 
     return `<tr>
         <td class="datum-cel">${formatDatum(w.datum)}</td>
-        <td>${naamA} - ${naamB}</td>
+        <td class="wedstrijd-cel"><span class="wedstrijd-speler">${naamA} <span class="mobiel-streep">-</span></span><span class="desktop-separator"> - </span><span class="wedstrijd-speler">${naamB}</span></td>
         <td class="uitslag-cel"><strong>${w.uitslag}</strong> <span class="set-klein">(${w.setstanden || ''})</span></td>
     </tr>`;
 }
@@ -529,8 +529,7 @@ function bouwHistorieRij(w) {
 
     return `<tr>
         <td class="datum-cel">${formatDatum(w.datum)}</td>
-        <td>${w.week}</td>
-        <td>${naamA} - ${naamB} ${puntenCombi}</td>
+        <td class="wedstrijd-cel"><span class="wedstrijd-speler">${naamA}</span><span class="desktop-separator"> - </span><span class="wedstrijd-speler">${naamB}</span> ${puntenCombi}</td>
         <td class="uitslag-cel"><strong>${w.uitslag}</strong> <span class="set-klein">(${w.setstanden || ''})</span></td>
         <td>
             <div class="actie-knoppen">
@@ -915,7 +914,7 @@ function laadBeheerTabellen() {
 
     alfabetischeSpelers.forEach(s => {
         spelerTbody.innerHTML += `<tr>
-            <td>${s.naam}</td><td>${s.type}</td><td class="punten-cel">${s.punten}</td><td>${s.elo}</td>
+            <td>${s.naam}</td><td class="punten-cel">${s.punten}</td><td>${s.elo}</td>
             <td>
                 <button class="btn btn-sm" onclick="startEditSpeler('${s.id}', '${escapeVoorOnclick(s.naam)}', '${s.type}', ${s.elo}, ${s.punten})"><i class="fa-solid fa-edit"></i></button>
                 <button class="btn btn-sm btn-danger" onclick="verwijderSpeler('${s.id}')"><i class="fa-solid fa-trash"></i></button>
@@ -931,6 +930,7 @@ function laadBeheerTabellen() {
             <td>${c.naam}</td><td>${c.type}</td>
             <td><span class="badge ${c.status === 'Actief' ? 'badge-active' : 'badge-archived'}">${c.status}</span></td>
             <td>
+                <button class="btn btn-sm" onclick="wijzigCompetitieNaam('${c.id}', '${escapeVoorOnclick(c.naam)}')"><i class="fa-solid fa-edit"></i> Naam</button>
                 <button class="btn btn-sm" style="background:#666;" onclick="beheerActie('reset-punten', '${c.id}')"><i class="fa-solid fa-undo"></i> Reset</button>
                 <button class="btn btn-sm btn-danger" onclick="verwijderCompetitie('${c.id}')"><i class="fa-solid fa-trash"></i> Wissen</button>
             </td>
@@ -1027,6 +1027,20 @@ function wisselCompetitieFormType(type) {
     const tabJeugd = document.getElementById('tab-comp-form-jeugd');
     if(tabSenioren) tabSenioren.classList.toggle('active', type === 'Senioren');
     if(tabJeugd) tabJeugd.classList.toggle('active', type === 'Jeugd');
+}
+
+async function wijzigCompetitieNaam(compId, huidigeNaam) {
+    const nieuweNaam = prompt('Nieuwe naam / omschrijving van de competitie:', huidigeNaam || '');
+    if(nieuweNaam === null) return;
+    const naam = nieuweNaam.trim();
+    if(!naam) return alert('Voer een naam in.');
+
+    await fetch('/api/competities/actie', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ actie: 'competitie-wijzig-naam', competitieId: compId, extra: { naam } })
+    });
+    laadData();
 }
 
 async function beheerActie(actie, compId = '') {
