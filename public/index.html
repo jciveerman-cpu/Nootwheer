@@ -375,6 +375,94 @@
             #historie-table-body td:nth-child(3) { width: 96px; }
             #historie-table-body td:nth-child(4) { width: 72px; }
         }
+
+
+        @media (max-width: 768px) {
+            .compact-ranglijst-table {
+                width: 100% !important;
+                min-width: 0 !important;
+                table-layout: fixed;
+            }
+            .compact-ranglijst-table th,
+            .compact-ranglijst-table td {
+                padding: 7px 4px !important;
+                font-size: 12px !important;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .compact-ranglijst-table th:nth-child(1),
+            .compact-ranglijst-table td:nth-child(1) {
+                width: 44px !important;
+                text-align: left;
+            }
+            .compact-ranglijst-table th:nth-child(2),
+            .compact-ranglijst-table td:nth-child(2) {
+                width: auto !important;
+                white-space: normal;
+                word-break: break-word;
+            }
+            .compact-ranglijst-table th:nth-child(3),
+            .compact-ranglijst-table td:nth-child(3) {
+                width: 62px !important;
+                text-align: right !important;
+                padding-right: 6px !important;
+            }
+            .compact-ranglijst-table th:nth-child(4),
+            .compact-ranglijst-table td:nth-child(4) {
+                width: 42px !important;
+                text-align: right !important;
+                padding-right: 2px !important;
+            }
+            .compact-ranglijst-table .trofee {
+                display: none;
+            }
+            .beheer-spelers-table {
+                width: 100% !important;
+                min-width: 0 !important;
+                table-layout: fixed;
+            }
+            .beheer-spelers-table th,
+            .beheer-spelers-table td {
+                padding: 7px 4px !important;
+                font-size: 12px !important;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .beheer-spelers-table th:nth-child(1),
+            .beheer-spelers-table td:nth-child(1) {
+                width: auto !important;
+                white-space: normal;
+                word-break: break-word;
+            }
+            .beheer-spelers-table th:nth-child(2),
+            .beheer-spelers-table td:nth-child(2) {
+                width: 58px !important;
+                text-align: right !important;
+                padding-right: 6px !important;
+            }
+            .beheer-spelers-table th:nth-child(3),
+            .beheer-spelers-table td:nth-child(3) {
+                width: 42px !important;
+                text-align: right !important;
+                padding-right: 2px !important;
+            }
+            .beheer-spelers-table th:nth-child(4),
+            .beheer-spelers-table td:nth-child(4) {
+                width: 66px !important;
+                white-space: nowrap;
+                text-align: right;
+            }
+            .beheer-spelers-table .btn-sm {
+                width: auto !important;
+                padding: 4px 5px !important;
+                font-size: 11px !important;
+                margin: 0 1px;
+            }
+            .dashboard-split-container .card,
+            .ranglijst-split-container .card {
+                overflow-x: hidden;
+            }
+        }
     </style>
 </head>
 <body>
@@ -431,7 +519,7 @@
             <div class="dashboard-split-container">
                 <div class="card" style="margin-bottom:0;">
                     <h3><i class="fa-solid fa-list-ol"></i> Ranglijst</h3>
-                    <table>
+                    <table class="compact-ranglijst-table">
                         <thead><tr><th class="positie-kolom">Pos</th><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
                         <tbody id="dash-top5-table-body"></tbody>
                     </table>
@@ -460,14 +548,14 @@
             <div class="ranglijst-split-container">
                 <div class="card" style="margin-bottom:0;">
                     <h3><i class="fa-solid fa-list-ol"></i> Seniorenladder</h3>
-                    <table>
+                    <table class="compact-ranglijst-table">
                         <thead><tr><th class="positie-kolom">Positie</th><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
                         <tbody id="ranglijst-senioren-table-body"></tbody>
                     </table>
                 </div>
                 <div class="card" style="margin-bottom:0;">
                     <h3><i class="fa-solid fa-list-ol"></i> Jeugdladder</h3>
-                    <table>
+                    <table class="compact-ranglijst-table">
                         <thead><tr><th class="positie-kolom">Positie</th><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
                         <tbody id="ranglijst-jeugd-table-body"></tbody>
                     </table>
@@ -547,7 +635,7 @@
                 </div>
                 <div class="form-group"><label>Naam speler</label><input type="text" id="speler-naam" placeholder="Bijv. Henk Bakker"></div>
                 <div class="form-group"><label>Actueel Puntensaldo</label><input type="number" id="speler-punten" value="0"></div>
-                <div class="form-group"><label>Vaste ELO Rating</label><input type="number" id="speler-elo" value="1500"></div>
+                <div class="form-group"><label>ELO</label><input type="number" id="speler-elo" value="1500"></div>
                 <button class="btn" id="btn-speler-opslaan" onclick="saveSpeler()">Speler Opslaan</button>
                 <button class="btn" id="btn-speler-annuleren" style="background:#666; display:none;" onclick="annuleerSpelerEdit()">Annuleren</button>
             </div>
@@ -557,8 +645,8 @@
                     <button id="tab-beheer-spelers-jeugd" class="tab-btn" onclick="wisselBeheerSpelersTab('Jeugd')">Jeugd</button>
                 </div>
                 <h3 id="beheer-spelers-lijst-titel">Actuele Senioren Spelerslijst (Alfabetisch op Naam)</h3>
-                <table>
-                    <thead><tr><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">Vaste ELO</th><th class="actie-kolom">Acties</th></tr></thead>
+                <table class="beheer-spelers-table">
+                    <thead><tr><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th><th class="actie-kolom">Acties</th></tr></thead>
                     <tbody id="beheer-spelers-table-body"></tbody>
                 </table>
             </div>
