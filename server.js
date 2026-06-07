@@ -153,6 +153,47 @@ function bepaalPositie(ranglijst, spelerId) {
     return index === -1 ? 999 : index + 1;
 }
 
+
+function controleerWedstrijdSets(sets) {
+    if (!Array.isArray(sets) || sets.length === 0) {
+        throw new Error('Vul de setstanden in.');
+    }
+
+    let setsA = 0;
+    let setsB = 0;
+    let wedstrijdBeslist = false;
+
+    sets.forEach((set, index) => {
+        if (wedstrijdBeslist) {
+            throw new Error('Er zijn setstanden ingevuld nadat de wedstrijd al beslist was. Controleer de setstanden.');
+        }
+
+        const a = Number(set.a);
+        const b = Number(set.b);
+
+        if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0) {
+            throw new Error(`Set ${index + 1} bevat geen geldige stand.`);
+        }
+        if (a === b) {
+            throw new Error(`Set ${index + 1} kan niet gelijk eindigen.`);
+        }
+
+        if (a > b) setsA++;
+        else setsB++;
+
+        if (setsA === 3 || setsB === 3) wedstrijdBeslist = true;
+    });
+
+    if (setsA !== 3 && setsB !== 3) {
+        throw new Error('Opslaan kan pas wanneer één speler drie sets heeft gewonnen.');
+    }
+    if (setsA === 3 && setsB === 3) {
+        throw new Error('Controleer de setstanden: beide spelers kunnen niet drie sets winnen.');
+    }
+
+    return { setsA, setsB };
+}
+
 function draaiPuntenMutatieTerug(db, wedstrijd) {
     const spelerA = db.spelers.find(s => s.id === wedstrijd.spelerAId);
     const spelerB = db.spelers.find(s => s.id === wedstrijd.spelerBId);
@@ -166,7 +207,8 @@ function draaiPuntenMutatieTerug(db, wedstrijd) {
 }
 
 function bouwWedstrijdEnPasPuntenToe(db, payload, bestaandId = null) {
-    const { competitieId, spelerAId, spelerBId, sets, uitslag, setstanden, winnaarId, type, gekozenDatum } = payload;
+    const { competitieId, spelerAId, spelerBId, sets, type, gekozenDatum } = payload;
+    const setControle = controleerWedstrijdSets(sets);
 
     const wedstrijdDatum = gekozenDatum ? new Date(gekozenDatum) : new Date();
     const weekVanWedstrijd = getISOWeeknummer(wedstrijdDatum);
@@ -191,13 +233,17 @@ function bouwWedstrijdEnPasPuntenToe(db, payload, bestaandId = null) {
     let puntenMutatieA = 0;
     let puntenMutatieB = 0;
 
-    if (winnaarId === spelerAId) {
+    const berekendeWinnaarId = setControle.setsA > setControle.setsB ? spelerAId : spelerBId;
+    const berekendeUitslag = `${setControle.setsA} - ${setControle.setsB}`;
+    const berekendeSetstanden = sets.map(s => `${s.a}-${s.b}`).join(', ');
+
+    if (berekendeWinnaarId === spelerAId) {
         puntenMutatieA = 1;
         if (positieVoorA > positieVoorB) {
             puntenMutatieA += 1;
             puntenMutatieB -= 1;
         }
-    } else if (winnaarId === spelerBId) {
+    } else if (berekendeWinnaarId === spelerBId) {
         puntenMutatieB = 1;
         if (positieVoorB > positieVoorA) {
             puntenMutatieB += 1;
@@ -218,9 +264,9 @@ function bouwWedstrijdEnPasPuntenToe(db, payload, bestaandId = null) {
         spelerAId,
         spelerBId,
         sets,
-        uitslag,
-        setstanden,
-        winnaarId,
+        uitslag: berekendeUitslag,
+        setstanden: berekendeSetstanden,
+        winnaarId: berekendeWinnaarId,
         type,
         positieVoorA,
         positieVoorB,
@@ -338,6 +384,11 @@ app.post('/api/competities/actie', async (req, res) => {
                 }
             } else if (actie === 'competitie-verwijder') {
                 db.competities = db.competities.filter(c => c.id !== competitieId);
+            } else if (actie === 'competitie-wijzig-naam') {
+                const comp = db.competities.find(c => c.id === competitieId);
+                if (!comp) throw new Error('Competitie niet gevonden.');
+                if (!extra || !extra.naam || !String(extra.naam).trim()) throw new Error('Voer een naam in.');
+                comp.naam = String(extra.naam).trim();
             } else if (actie === 'speler-nieuw') {
                 db.spelers.push({ id: 's_' + Date.now(), naam: extra.naam, type: extra.type, punten: extra.punten, elo: extra.elo, actief: true });
             } else if (actie === 'speler-wijzig') {
