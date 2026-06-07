@@ -1,1 +1,345 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>TTV Het Nootwheer - Laddercompetitie</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { display: flex; background: #f4f6f9; height: 100vh; overflow: hidden; }
+        .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #062b5e; display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-card { background: white; padding: 40px; border-radius: 8px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .login-logo { width: 95px; height: auto; margin-bottom: 15px; }
+        .sidebar { width: 260px; background: #0a3d82; color: white; display: flex; flex-direction: column; }
+        .logo-area { padding: 20px; text-align: center; background: #062b5e; border-bottom: 2px solid #cc1111; }
+        .logo-img { width: 90px; height: auto; margin-bottom: 10px; }
+        .logo-area h2 { font-size: 18px; }
+        .logo-area p { font-size: 11px; color: #ffcc00; font-weight: bold; }
+        .nav-menu { list-style: none; margin-top: 15px; flex: 1; display: flex; flex-direction: column; }
+        .nav-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; font-size: 14px; }
+        .nav-item:hover, .nav-item.active { background: #cc1111; }
+        .nav-admin-only { border-left: 4px solid #ffcc00; display: none; }
+        .sidebar-copyright { padding: 10px 20px 14px; font-size: 12px; color: rgba(255,255,255,0.75); }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .app-footer { margin-top: auto; padding: 10px 30px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #e0e0e0; background: #f4f6f9; }
+        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e0e0; }
+        .view-container { padding: 30px; display: none; }
+        .view-container.active { display: block; }
+        .dashboard-split-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        .ranglijst-split-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 10px; }
+        .card { background: white; padding: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card h3 { font-size: 13px; color: #666; text-transform: uppercase; margin-bottom: 10px; }
+        .card .value { font-size: 24px; font-weight: bold; color: #333; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+        th { background: #f8f9fa; color: #555; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn { background: #0a3d82; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn:hover { background: #062b5e; }
+        .btn-danger { background: #cc1111; }
+        .btn-danger:hover { background: #990000; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .tab-btn { background: #e0e0e0; color: #333; padding: 8px 16px; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        .tab-btn.active { background: #0a3d82; color: white; }
+        .set-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+        .set-row input { width: 70px; text-align: center; }
+        .live-uitslag { background: #e6f4ea; color: #137333; padding: 15px; border-radius: 4px; margin-top: 15px; font-weight: bold; text-align: center; }
+        .set-klein { font-weight: normal; color: #777; font-size: 13px; margin-left: 10px; }
+        .uitslag-kolom { width: 230px; white-space: nowrap; }
+        .uitslag-cel { white-space: nowrap; }
+        .punten-kolom { width: 90px; text-align: right; padding-right: 34px; }
+        .punten-cel { text-align: right; padding-right: 34px; }
+        .datum-cel { white-space: nowrap; }
+        .goud { color: #d4af37; font-weight: bold; background: #fffdf0; }
+        .zilver { color: #aaa9ad; font-weight: bold; background: #f7f7f8; }
+        .brons { color: #cd7f32; font-weight: bold; background: #faf5f0; }
+        .trofee { font-size: 16px; margin-right: 5px; }
+        .clickable-player { color: inherit; font-weight: normal; cursor: pointer; text-decoration: none; }
+        .punten-plus { color: #137333; font-weight: 700; white-space: nowrap; }
+        .punten-min { color: #cc1111; font-weight: 700; white-space: nowrap; }
+        .punten-neutraal { color: #777; white-space: nowrap; }
+        .wv-cel { font-weight: 700; white-space: nowrap; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; justify-content: center; align-items: center; z-index: 10000; padding: 24px; }
+        .modal-content { background: white; width: min(92vw, 760px); max-height: 88vh; overflow-y: auto; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
+        .modal-content.modal-breed { width: min(96vw, 1240px); }
+        .modal-header { background: #0a3d82; color: white; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        .modal-header h2 { font-size: 24px; }
+        .modal-close { background: transparent; color: white; border: none; font-size: 28px; cursor: pointer; }
+        .modal-body { padding: 24px; }
+        .modal-tabs { display: flex; gap: 10px; margin-bottom: 16px; }
+        .speler-info { font-size: 18px; color: #555; margin-bottom: 16px; }
+        #speler-historie-table th:nth-child(1), #speler-historie-table td:nth-child(1) { width: 120px; white-space: nowrap; }
+        #speler-historie-table th:nth-child(2), #speler-historie-table td:nth-child(2) { width: 70px; }
+        #speler-historie-table th:nth-child(5), #speler-historie-table td:nth-child(5) { width: 70px; white-space: nowrap; }
+        #speler-historie-table th:nth-child(6), #speler-historie-table td:nth-child(6) { width: 100px; white-space: nowrap; }
+        .spelregels-lijst { padding-left: 20px; line-height: 1.7; }
+        .spelregels-disclaimer { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e0e0e0; color: #555; line-height: 1.5; font-size: 14px; }
+        .overzicht-acties { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+        .overzicht-acties .form-group { width: 190px; margin-bottom: 0; }
+        .speler-zoek-wrapper { position: relative; }
+        .speler-hint { font-size: 12px; color: #666; margin-top: 5px; }
+        .veld-waarschuwing { display: none; color: #cc1111; font-weight: 600; font-size: 12px; margin-top: 5px; }
+        .input-waarschuwing { border-color: #cc1111 !important; background: #fff5f5; }
+        .form-status { display: none; background: #fff4e5; color: #7a3b00; padding: 10px 12px; border-radius: 4px; margin-bottom: 15px; font-weight: 600; }
+        .actie-knoppen { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-warning { background: #f39c12; }
+        .btn-warning:hover { background: #d68910; }
+    </style>
+</head>
+<body>
+    <div id="login-screen" class="login-overlay">
+        <div class="login-card">
+            <img src="logo.png" class="login-logo" alt="Logo TTV Het Nootwheer">
+            <h2 style="margin-bottom: 5px; color:#0a3d82;">TTV Het Nootwheer</h2>
+            <p style="color:#666; font-size:14px; margin-bottom:20px;">Laddercompetitie Interface</p>
+            <div class="form-group" style="text-align:left;"><label>Gebruikersnaam</label><input type="text" id="login-username" value="speler"></div>
+            <div class="form-group" style="text-align:left; margin-bottom:12px;"><label>Toegangscode / wachtwoord</label><input type="password" id="login-password" value="speler"></div>
+            <p style="color:#777; font-size:12px; margin-bottom:18px;">Log in als speler of beheerder.</p>
+            <button class="btn" style="width:100%; padding:12px;" onclick="behandelInloggen()">Inloggen</button>
+        </div>
+    </div>
 
+    <div class="sidebar">
+        <div class="logo-area">
+            <img src="logo.png" class="logo-img" alt="Logo TTV Het Nootwheer">
+            <h2>TTV Het Nootwheer</h2>
+            <p>LADDERCOMPETITIE</p>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item active" onclick="switchView('dashboard')"><i class="fa-solid fa-gauge"></i> Dashboard</li>
+            <li class="nav-item" onclick="switchView('ranglijst')"><i class="fa-solid fa-list-ol"></i> Ranglijst</li>
+            <li class="nav-item" onclick="switchView('invoeren')"><i class="fa-solid fa-circle-plus"></i> Wedstrijd invoeren</li>
+            <li class="nav-item" onclick="switchView('historie')"><i class="fa-solid fa-history"></i> Historie</li>
+            <li class="nav-item nav-admin-only" id="menu-beheer-spelers" onclick="switchView('beheer-spelers')"><i class="fa-solid fa-users-cog"></i> Spelersbeheer</li>
+            <li class="nav-item nav-admin-only" id="menu-beheer-comp" onclick="switchView('beheer-competities')"><i class="fa-solid fa-cogs"></i> Competitiebeheer</li>
+            <li class="nav-item" style="margin-top:auto;" onclick="toggleHelpmenu()"><i class="fa-solid fa-circle-info"></i> Spelregels</li>
+            <li class="nav-item" style="background:#666;" onclick="uitloggen()"><i class="fa-solid fa-sign-out-alt"></i> Uitloggen</li>
+            <li class="sidebar-copyright">© John Veerman</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h2 id="current-view-title">TTV Het Nootwheer Laddercompetitie</h2>
+            <div id="rol-indicator" style="font-weight:bold; color:#0a3d82;"><i class="fa-solid fa-user"></i> Speler Modus</div>
+        </div>
+
+        <div id="view-dashboard" class="view-container active">
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <button id="tab-dash-senioren" class="tab-btn active" onclick="wisselDashboardTab('Senioren')">Senioren</button>
+                <button id="tab-dash-jeugd" class="tab-btn" onclick="wisselDashboardTab('Jeugd')">Jeugd</button>
+            </div>
+            <div class="dashboard-grid">
+                <div class="card"><h3>Actieve competitie</h3><div class="value" id="dash-comp">-</div></div>
+                <div class="card"><h3>Huidig Weeknummer</h3><div class="value" id="dash-week">-</div></div>
+                <div class="card"><h3>Aantal actieve spelers</h3><div class="value" id="dash-spelers">-</div></div>
+            </div>
+            <div class="dashboard-split-container">
+                <div class="card" style="margin-bottom:0;">
+                    <h3><i class="fa-solid fa-list-ol"></i> Ranglijst</h3>
+                    <table>
+                        <thead><tr><th style="width:70px;">Pos</th><th>Naam</th><th class="punten-kolom">Punten</th><th>ELO</th></tr></thead>
+                        <tbody id="dash-top5-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="card" style="margin-bottom:0;">
+                    <h3><i class="fa-solid fa-history"></i> Laatste Wedstrijden (Aflopend)</h3>
+                    <table id="dash-wedstrijden-table">
+                        <thead><tr><th style="width:110px;">Datum</th><th>Wedstrijd</th><th class="uitslag-kolom">Uitslag</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-ranglijst" class="view-container">
+            <div class="card">
+                <div class="overzicht-acties">
+                    <div class="form-group">
+                        <label>Overzichtdatum</label>
+                        <input type="date" id="overzicht-datum">
+                    </div>
+                    <button class="btn" style="background:#137333;" onclick="deelStandViaWhatsapp('Senioren')"><i class="fa-brands fa-whatsapp"></i> Deel seniorenranglijst</button>
+                    <button class="btn" style="background:#137333;" onclick="deelStandViaWhatsapp('Jeugd')"><i class="fa-brands fa-whatsapp"></i> Deel jeugdranglijst</button>
+                </div>
+            </div>
+            <div class="ranglijst-split-container">
+                <div class="card" style="margin-bottom:0;">
+                    <h3><i class="fa-solid fa-list-ol"></i> Seniorenladder</h3>
+                    <table>
+                        <thead><tr><th style="width:90px;">Positie</th><th>Naam</th><th class="punten-kolom">Punten</th><th>ELO Rating</th></tr></thead>
+                        <tbody id="ranglijst-senioren-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="card" style="margin-bottom:0;">
+                    <h3><i class="fa-solid fa-list-ol"></i> Jeugdladder</h3>
+                    <table>
+                        <thead><tr><th style="width:90px;">Positie</th><th>Naam</th><th class="punten-kolom">Punten</th><th>ELO Rating</th></tr></thead>
+                        <tbody id="ranglijst-jeugd-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-invoeren" class="view-container">
+            <div class="card" style="max-width: 600px;">
+                <form id="wedstrijd-form" onsubmit="saveWedstrijd(event)">
+                    <input type="hidden" id="edit-wedstrijd-id">
+                    <div id="wedstrijd-edit-status" class="form-status"></div>
+                    <div class="form-group">
+                        <label>Kies Categorie</label>
+                        <div style="display:flex; gap:10px;">
+                            <button type="button" id="tab-invoer-senioren" class="tab-btn active" onclick="wisselInvoerTab('Senioren')">Senioren</button>
+                            <button type="button" id="tab-invoer-jeugd" class="tab-btn" onclick="wisselInvoerTab('Jeugd')">Jeugd</button>
+                        </div>
+                        <select id="w-type" onchange="wisselInvoerType()" style="display:none;"><option value="Senioren">Senioren</option><option value="Jeugd">Jeugd</option></select>
+                    </div>
+                    <div class="form-group"><label>Datum van Wedstrijd</label><input type="date" id="w-datum"></div>
+                    <div class="form-group speler-zoek-wrapper">
+                        <label>Speler A</label>
+                        <input type="text" id="w-spelerA-zoek" list="spelersA-list" placeholder="Typ de naam van speler A" oninput="selecteerSpelerUitZoekveld('A')" onchange="selecteerSpelerUitZoekveld('A')" autocomplete="off">
+                        <datalist id="spelersA-list"></datalist>
+                        <input type="hidden" id="w-spelerA">
+                        <div class="speler-hint">Begin met typen en kies daarna de speler uit de lijst.</div>
+                        <div id="w-spelerA-waarschuwing" class="veld-waarschuwing">Kies een geldige speler uit de lijst.</div>
+                    </div>
+                    <div class="form-group speler-zoek-wrapper">
+                        <label>Speler B</label>
+                        <input type="text" id="w-spelerB-zoek" list="spelersB-list" placeholder="Typ de naam van speler B" oninput="selecteerSpelerUitZoekveld('B')" onchange="selecteerSpelerUitZoekveld('B')" autocomplete="off">
+                        <datalist id="spelersB-list"></datalist>
+                        <input type="hidden" id="w-spelerB">
+                        <div class="speler-hint">Begin met typen en kies daarna de speler uit de lijst.</div>
+                        <div id="w-spelerB-waarschuwing" class="veld-waarschuwing">Kies een geldige speler uit de lijst.</div>
+                    </div>
+                    <label style="font-weight:bold; display:block; margin-bottom:5px;">Setstanden (Vul 1 veld in, computer rekent door!)</label>
+                    <div id="set-inputs">
+                        <div class="set-row"><span>Set 1:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                        <div class="set-row"><span>Set 2:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                        <div class="set-row"><span>Set 3:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                        <div class="set-row"><span>Set 4:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                        <div class="set-row"><span>Set 5:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                    </div>
+                    <div class="live-uitslag" id="live-uitslag-box">Voer setstanden in...</div>
+                    <button type="submit" class="btn" id="wedstrijd-submit-btn" style="width:100%; margin-top:15px;">Wedstrijd opslaan en bevestigen</button>
+                    <button type="button" class="btn" id="wedstrijd-annuleer-btn" style="width:100%; margin-top:8px; background:#666; display:none;" onclick="annuleerWedstrijdEdit()">Wijzigen annuleren</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="view-historie" class="view-container">
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <button id="tab-hist-senioren" class="tab-btn active" onclick="wisselHistorieTab('Senioren')">Senioren Historie</button>
+                <button id="tab-hist-jeugd" class="tab-btn" onclick="wisselHistorieTab('Jeugd')">Jeugd Historie</button>
+            </div>
+            <div class="card">
+                <table>
+                    <thead><tr><th style="width:110px;">Datum</th><th style="width:60px;">Week</th><th>Wedstrijd</th><th class="uitslag-kolom">Uitslag</th><th style="width:120px;">Acties</th></tr></thead>
+                    <tbody id="historie-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-beheer-spelers" class="view-container">
+            <div class="card" style="max-width: 500px;">
+                <h3 id="speler-form-titel">Nieuwe Speler Toevoegen</h3>
+                <input type="hidden" id="edit-speler-id">
+                <div class="form-group">
+                    <label>Type Ladder</label>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" id="tab-speler-form-senioren" class="tab-btn active" onclick="wisselSpelerFormType('Senioren')">Senioren</button>
+                        <button type="button" id="tab-speler-form-jeugd" class="tab-btn" onclick="wisselSpelerFormType('Jeugd')">Jeugd</button>
+                    </div>
+                    <select id="speler-type" style="display:none;"><option value="Senioren">Senioren</option><option value="Jeugd">Jeugd</option></select>
+                </div>
+                <div class="form-group"><label>Naam speler</label><input type="text" id="speler-naam" placeholder="Bijv. Henk Bakker"></div>
+                <div class="form-group"><label>Actueel Puntensaldo</label><input type="number" id="speler-punten" value="0"></div>
+                <div class="form-group"><label>Vaste ELO Rating</label><input type="number" id="speler-elo" value="1500"></div>
+                <button class="btn" id="btn-speler-opslaan" onclick="saveSpeler()">Speler Opslaan</button>
+                <button class="btn" id="btn-speler-annuleren" style="background:#666; display:none;" onclick="annuleerSpelerEdit()">Annuleren</button>
+            </div>
+            <div class="card">
+                <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <button id="tab-beheer-spelers-senioren" class="tab-btn active" onclick="wisselBeheerSpelersTab('Senioren')">Senioren</button>
+                    <button id="tab-beheer-spelers-jeugd" class="tab-btn" onclick="wisselBeheerSpelersTab('Jeugd')">Jeugd</button>
+                </div>
+                <h3 id="beheer-spelers-lijst-titel">Actuele Senioren Spelerslijst (Alfabetisch op Naam)</h3>
+                <table>
+                    <thead><tr><th>Naam</th><th>Type</th><th class="punten-kolom">Punten</th><th>Vaste ELO</th><th>Acties</th></tr></thead>
+                    <tbody id="beheer-spelers-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-beheer-competities" class="view-container">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>Nieuwe Competitie Starten</h3>
+                    <div class="form-group" style="margin-top:10px;"><label>Naam</label><input type="text" id="new-comp-naam" placeholder="Bijv. Senioren Najaar 2026"></div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <div style="display:flex; gap:10px;">
+                            <button type="button" id="tab-comp-form-senioren" class="tab-btn active" onclick="wisselCompetitieFormType('Senioren')">Senioren</button>
+                            <button type="button" id="tab-comp-form-jeugd" class="tab-btn" onclick="wisselCompetitieFormType('Jeugd')">Jeugd</button>
+                        </div>
+                        <select id="new-comp-type" style="display:none;"><option value="Senioren">Senioren</option><option value="Jeugd">Jeugd</option></select>
+                    </div>
+                    <button class="btn" onclick="beheerActie('nieuw')">Competitie Starten</button>
+                </div>
+                <div class="card">
+                    <h3>Extra Beheerder Toevoegen</h3>
+                    <div class="form-group" style="margin-top:10px;"><label>Gebruikersnaam</label><input type="text" id="new-admin-user" placeholder="Gebruikersnaam"></div>
+                    <div class="form-group"><label>Wachtwoord</label><input type="text" id="new-admin-pass" placeholder="Wachtwoord"></div>
+                    <button class="btn" onclick="voegBeheerderToe()">Beheerder Opslaan</button>
+                    <h4 style="margin-top:20px; font-size:13px; color:#555;">Actieve Beheerders:</h4>
+                    <ul id="beheerders-lijst" style="margin-top:10px; list-style:none; font-size:14px;"></ul>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Alle Competities & Beheer Acties</h3>
+                <table>
+                    <thead><tr><th>Naam</th><th>Type</th><th>Status</th><th>Acties</th></tr></thead>
+                    <tbody id="beheer-comp-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="help-modal" class="modal-overlay" onclick="sluitHelpmenuExtern(event)">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Spelregels laddercompetitie</h2><button class="modal-close" onclick="toggleHelpmenu()">&times;</button></div>
+            <div class="modal-body">
+                <ul class="spelregels-lijst">
+                    <li>De puntentelling wordt berekend op basis van de actuele ranglijst op het moment van invoeren.</li>
+                    <li>Winst tegen een lager geplaatste speler: winnaar krijgt +1 punt, verliezer krijgt 0 punten.</li>
+                    <li>Winst tegen een hoger geplaatste speler: winnaar krijgt +2 punten, verliezer verliest 1 punt.</li>
+                    <li>Bij gelijke punten wordt de ranglijst gesorteerd op ELO-rating.</li>
+                </ul>
+                <p class="spelregels-disclaimer">De informatie op deze website is openbaar. De deelnemers aan de laddercompetitie stemmen ermee in dat deze informatie kan worden gezien en gedeeld door derden.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="speler-historie-modal" class="modal-overlay" onclick="sluitSpelerHistorieExtern(event)">
+        <div class="modal-content modal-breed">
+            <div class="modal-header"><h2 id="speler-historie-titel">Wedstrijdhistorie</h2><button class="modal-close" onclick="sluitSpelerHistorie()">&times;</button></div>
+            <div class="modal-body">
+                <div class="modal-tabs">
+                    <button id="tab-spelerhist-senioren" class="tab-btn active" onclick="wisselSpelerHistorieTab('Senioren')">Seniorenladder</button>
+                    <button id="tab-spelerhist-jeugd" class="tab-btn" onclick="wisselSpelerHistorieTab('Jeugd')">Jeugdladder</button>
+                </div>
+                <div id="speler-historie-info" class="speler-info"></div>
+                <div style="margin-bottom:16px;"><button class="btn" style="background:#137333;" onclick="deelSpelerHistorieViaWhatsapp()"><i class="fa-brands fa-whatsapp"></i> Deel deze wedstrijdhistorie</button></div>
+                <table id="speler-historie-table">
+                    <thead><tr><th>Datum</th><th>Week</th><th>Tegenstander</th><th>Uitslag</th><th>W/V</th><th>Punten</th></tr></thead>
+                    <tbody id="speler-historie-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
