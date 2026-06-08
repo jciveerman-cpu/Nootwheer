@@ -233,8 +233,7 @@
                 margin-bottom: 12px;
             }
             #dash-top5-table-body,
-            #ranglijst-senioren-table-body,
-            #ranglijst-jeugd-table-body {
+            #ranglijst-table-body {
                 font-size: 13px;
             }
             th, td {
@@ -356,14 +355,11 @@
             .actie-knoppen { gap: 4px; }
             .actie-knoppen .btn-sm { padding: 4px 6px; font-size: 11px; }
             #dash-top5-table-body td:nth-child(1),
-            #ranglijst-senioren-table-body td:nth-child(1),
-            #ranglijst-jeugd-table-body td:nth-child(1) { width: 42px; }
+            #ranglijst-table-body td:nth-child(1) { width: 42px; }
             #dash-top5-table-body td:nth-child(3),
-            #ranglijst-senioren-table-body td:nth-child(3),
-            #ranglijst-jeugd-table-body td:nth-child(3) { width: 58px; }
+            #ranglijst-table-body td:nth-child(3) { width: 58px; }
             #dash-top5-table-body td:nth-child(4),
-            #ranglijst-senioren-table-body td:nth-child(4),
-            #ranglijst-jeugd-table-body td:nth-child(4) { width: 54px; }
+            #ranglijst-table-body td:nth-child(4) { width: 54px; }
             .dashboard-split-container .card,
             .ranglijst-split-container .card { overflow-x: hidden; }
             #dash-wedstrijden-table { table-layout: fixed; }
@@ -535,31 +531,25 @@
         </div>
 
         <div id="view-ranglijst" class="view-container">
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="tab-rang-senioren" class="tab-btn active" onclick="wisselRanglijstTab('Senioren')">Senioren Ranglijst</button>
+                <button id="tab-rang-jeugd" class="tab-btn" onclick="wisselRanglijstTab('Jeugd')">Jeugd Ranglijst</button>
+            </div>
             <div class="card">
                 <div class="overzicht-acties">
                     <div class="form-group">
                         <label>Overzichtdatum</label>
                         <input type="date" id="overzicht-datum">
                     </div>
-                    <button class="btn" style="background:#137333;" onclick="deelStandViaWhatsapp('Senioren')"><i class="fa-brands fa-whatsapp"></i> Deel seniorenranglijst</button>
-                    <button class="btn" style="background:#137333;" onclick="deelStandViaWhatsapp('Jeugd')"><i class="fa-brands fa-whatsapp"></i> Deel jeugdranglijst</button>
+                    <button class="btn" style="background:#137333;" onclick="deelZichtbareRanglijstViaWhatsapp()"><i class="fa-brands fa-whatsapp"></i> Deel zichtbare ranglijst</button>
                 </div>
             </div>
-            <div class="ranglijst-split-container">
-                <div class="card" style="margin-bottom:0;">
-                    <h3><i class="fa-solid fa-list-ol"></i> Seniorenladder</h3>
-                    <table class="compact-ranglijst-table">
-                        <thead><tr><th class="positie-kolom">Positie</th><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
-                        <tbody id="ranglijst-senioren-table-body"></tbody>
-                    </table>
-                </div>
-                <div class="card" style="margin-bottom:0;">
-                    <h3><i class="fa-solid fa-list-ol"></i> Jeugdladder</h3>
-                    <table class="compact-ranglijst-table">
-                        <thead><tr><th class="positie-kolom">Positie</th><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
-                        <tbody id="ranglijst-jeugd-table-body"></tbody>
-                    </table>
-                </div>
+            <div class="card" style="margin-bottom:0;">
+                <h3 id="ranglijst-titel"><i class="fa-solid fa-list-ol"></i> Senioren Ranglijst</h3>
+                <table class="compact-ranglijst-table">
+                    <thead><tr><th class="positie-kolom">Positie</th><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
+                    <tbody id="ranglijst-table-body"></tbody>
+                </table>
             </div>
         </div>
 
@@ -609,9 +599,10 @@
         </div>
 
         <div id="view-historie" class="view-container">
-            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button id="tab-hist-senioren" class="tab-btn active" onclick="wisselHistorieTab('Senioren')">Senioren Historie</button>
                 <button id="tab-hist-jeugd" class="tab-btn" onclick="wisselHistorieTab('Jeugd')">Jeugd Historie</button>
+                <button class="btn" style="background:#137333;" onclick="deelZichtbareHistorieViaWhatsapp()"><i class="fa-brands fa-whatsapp"></i> Deel zichtbare historie</button>
             </div>
             <div class="card">
                 <table>
