@@ -95,8 +95,14 @@
         .input-waarschuwing { border-color: #cc1111 !important; background: #fff5f5; }
         .form-status { display: none; background: #fff4e5; color: #7a3b00; padding: 10px 12px; border-radius: 4px; margin-bottom: 15px; font-weight: 600; }
         .actie-knoppen { display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn-warning { background: #f39c12; }
-        .btn-warning:hover { background: #d68910; }
+        .btn-edit { background: #0a3d82; }
+        .btn-edit:hover { background: #062b5e; }
+        .btn-reset { background: #666; }
+        .btn-reset:hover { background: #555; }
+        .btn-delete { background: #cc1111; }
+        .btn-delete:hover { background: #990000; }
+        .tab-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .beheer-comp-table .actie-knoppen { flex-wrap: nowrap; }
 
         @media (max-width: 1100px) {
             .dashboard-split-container,
@@ -459,6 +465,101 @@
                 overflow-x: hidden;
             }
         }
+
+
+        @media (min-width: 769px) {
+            .beheer-comp-table .actie-kolom,
+            .beheer-comp-table td.comp-acties {
+                width: 132px;
+                white-space: nowrap;
+            }
+            .beheer-comp-table .actie-knoppen .btn-sm {
+                width: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tab-row {
+                gap: 10px;
+                margin-bottom: 14px;
+            }
+            .tab-row .tab-btn {
+                background: #e0e0e0;
+                color: #333;
+            }
+            .tab-row .tab-btn.active {
+                background: #0a3d82;
+                color: #fff;
+            }
+            .beheer-comp-table {
+                min-width: 0 !important;
+                width: 100% !important;
+                box-shadow: none;
+                background: transparent;
+                border-radius: 0;
+            }
+            .beheer-comp-table thead {
+                display: none;
+            }
+            .beheer-comp-table tr {
+                display: block;
+                background: #fff;
+                border: 1px solid #eee;
+                border-radius: 8px;
+                margin-bottom: 12px;
+                padding: 12px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+            .beheer-comp-table td {
+                display: block;
+                width: 100% !important;
+                border-bottom: none;
+                padding: 2px 0 !important;
+                font-size: 13px !important;
+                white-space: normal !important;
+            }
+            .beheer-comp-table td.comp-naam {
+                font-weight: 700;
+                color: #333;
+                font-size: 14px !important;
+                margin-bottom: 4px;
+            }
+            .beheer-comp-table td.comp-type,
+            .beheer-comp-table td.comp-status {
+                color: #555;
+            }
+            .beheer-comp-table td.comp-type::before {
+                content: "Type: ";
+                font-weight: 600;
+            }
+            .beheer-comp-table td.comp-status::before {
+                content: "Status: ";
+                font-weight: 600;
+            }
+            .beheer-comp-table td.comp-acties {
+                margin-top: 18px;
+                padding-top: 10px !important;
+                border-top: 1px solid #eee;
+            }
+            .beheer-comp-table td.comp-acties::before {
+                content: "Acties";
+                display: block;
+                font-weight: 700;
+                color: #555;
+                margin-bottom: 10px;
+            }
+            .beheer-comp-table .actie-knoppen {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .beheer-comp-table .actie-knoppen .btn-sm {
+                width: auto !important;
+                min-width: 42px;
+                padding: 8px 10px !important;
+                font-size: 13px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -503,7 +604,7 @@
         </div>
 
         <div id="view-dashboard" class="view-container active">
-            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+            <div class="tab-row">
                 <button id="tab-dash-senioren" class="tab-btn active" onclick="wisselDashboardTab('Senioren')">Senioren</button>
                 <button id="tab-dash-jeugd" class="tab-btn" onclick="wisselDashboardTab('Jeugd')">Jeugd</button>
             </div>
@@ -560,7 +661,7 @@
                     <div id="wedstrijd-edit-status" class="form-status"></div>
                     <div class="form-group">
                         <label>Kies Categorie</label>
-                        <div style="display:flex; gap:10px;">
+                        <div class="tab-row" style="margin-bottom:0;">
                             <button type="button" id="tab-invoer-senioren" class="tab-btn active" onclick="wisselInvoerTab('Senioren')">Senioren</button>
                             <button type="button" id="tab-invoer-jeugd" class="tab-btn" onclick="wisselInvoerTab('Jeugd')">Jeugd</button>
                         </div>
@@ -650,7 +751,7 @@
                     <div class="form-group" style="margin-top:10px;"><label>Naam</label><input type="text" id="new-comp-naam" placeholder="Bijv. Senioren Najaar 2026"></div>
                     <div class="form-group">
                         <label>Type</label>
-                        <div style="display:flex; gap:10px;">
+                        <div class="tab-row" style="margin-bottom:0;">
                             <button type="button" id="tab-comp-form-senioren" class="tab-btn active" onclick="wisselCompetitieFormType('Senioren')">Senioren</button>
                             <button type="button" id="tab-comp-form-jeugd" class="tab-btn" onclick="wisselCompetitieFormType('Jeugd')">Jeugd</button>
                         </div>
@@ -669,7 +770,7 @@
             </div>
             <div class="card">
                 <h3>Alle Competities & Beheer Acties</h3>
-                <table>
+                <table id="beheer-comp-table" class="beheer-comp-table">
                     <thead><tr><th>Naam / omschrijving</th><th>Type</th><th>Status</th><th class="actie-kolom">Acties</th></tr></thead>
                     <tbody id="beheer-comp-table-body"></tbody>
                 </table>
