@@ -67,13 +67,20 @@ function pasRolWeergaveToe() {
 
 function toggleHelpmenu() {
     const helpModal = document.getElementById('help-modal');
-    helpModal.style.display = (helpModal.style.display === 'flex') ? 'none' : 'flex';
+    const wordtGeopend = helpModal.style.display !== 'flex';
+    helpModal.style.display = wordtGeopend ? 'flex' : 'none';
+    if(wordtGeopend) sluitMobielMenu();
 }
 
 function sluitHelpmenuExtern(e) {
     if(e.target.id === 'help-modal') {
         document.getElementById('help-modal').style.display = 'none';
     }
+}
+
+function sluitMobielMenu() {
+    const menu = document.querySelector('.nav-menu');
+    if(menu) menu.classList.remove('mobile-open');
 }
 
 function getLokaleDatumVandaag() {
@@ -216,6 +223,7 @@ function switchView(viewName) {
     document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.getElementById(`view-${viewName}`).classList.add('active');
+    sluitMobielMenu();
     if(viewName === 'dashboard' || viewName === 'ranglijst' || viewName === 'historie' || viewName === 'beheer-spelers') laadData();
 }
 
@@ -272,16 +280,32 @@ function genereerRanglijstTabelRijen(spelersLijst) {
 }
 
 function laadRanglijst() {
-    const tbodySenioren = document.getElementById('ranglijst-senioren-table-body');
-    const tbodyJeugd = document.getElementById('ranglijst-jeugd-table-body');
-    if(!tbodySenioren || !tbodyJeugd) return;
+    const tbody = document.getElementById('ranglijst-table-body');
+    if(!tbody) return;
 
-    const sorteerSpelers = (type) => appData.spelers
-        .filter(s => s.type === type && s.actief)
-        .sort((a, b) => b.punten - a.punten || b.elo - a.elo || a.naam.localeCompare(b.naam));
+    const tabSenioren = document.getElementById('tab-rang-senioren');
+    const tabJeugd = document.getElementById('tab-rang-jeugd');
+    if(tabSenioren) tabSenioren.classList.toggle('active', geselecteerdRanglijstType === 'Senioren');
+    if(tabJeugd) tabJeugd.classList.toggle('active', geselecteerdRanglijstType === 'Jeugd');
 
-    tbodySenioren.innerHTML = genereerRanglijstTabelRijen(sorteerSpelers('Senioren').slice(0, 10));
-    tbodyJeugd.innerHTML = genereerRanglijstTabelRijen(sorteerSpelers('Jeugd').slice(0, 10));
+    const titel = document.getElementById('ranglijst-titel');
+    if(titel) titel.innerHTML = `<i class="fa-solid fa-list-ol"></i> ${geselecteerdRanglijstType} Ranglijst`;
+
+    tbody.innerHTML = getGesorteerdeSpelers(geselecteerdRanglijstType)
+        .slice(0, 10)
+        .map((s, index) => {
+            let posKlasse = '';
+            let medaille = `<strong>${index+1}</strong>`;
+            if (index === 0) { posKlasse = 'goud'; medaille = `<i class="fa-solid fa-medal trofee"></i> 1`; }
+            else if (index === 1) { posKlasse = 'zilver'; medaille = `<i class="fa-solid fa-medal trofee"></i> 2`; }
+            else if (index === 2) { posKlasse = 'brons'; medaille = `<i class="fa-solid fa-medal trofee"></i> 3`; }
+            return `<tr class="${posKlasse}">
+                <td>${medaille}</td>
+                <td><span class="clickable-player" onclick="toonSpelerHistorie('${s.id}')">${escapeHtml(s.naam)}</span></td>
+                <td class="punten-cel">${s.punten}</td>
+                <td>${s.elo}</td>
+            </tr>`;
+        }).join('');
 }
 
 function wisselInvoerTab(type) {
@@ -423,7 +447,11 @@ function updateLiveUitslag() {
         }
     }
     const box = document.getElementById('live-uitslag-box');
-    if(box) box.innerText = (setsA === 0 && setsB === 0) ? 'Voer setstanden in...' : `${setsA >= setsB ? naamA : naamB} wint met ${setsA} - ${setsB}`;
+    if(box) {
+        if (setsA === 0 && setsB === 0) box.innerText = 'Voer setstanden in...';
+        else if (setsA === 3 || setsB === 3) box.innerText = `${setsA > setsB ? naamA : naamB} wint met ${setsA} - ${setsB}`;
+        else box.innerText = `Tussenstand: ${setsA} - ${setsB}`;
+    }
 }
 
 async function saveWedstrijd(e) {
@@ -442,19 +470,39 @@ async function saveWedstrijd(e) {
     const rowsB = document.querySelectorAll('.set-b');
     let sets = [];
     let setsA = 0, setsB = 0;
+    let legeSetGezien = false;
+    let wedstrijdBeslist = false;
 
     for(let i=0; i<5; i++) {
-        const a = parseInt(rowsA[i].value);
-        const b = parseInt(rowsB[i].value);
-        if(!isNaN(a) && !isNaN(b)) {
-            sets.push({a, b});
-            if(a > b) setsA++;
-            if(b > a) setsB++;
+        const rawA = rowsA[i].value;
+        const rawB = rowsB[i].value;
+        const heeftA = rawA !== '';
+        const heeftB = rawB !== '';
+
+        if(!heeftA && !heeftB) {
+            legeSetGezien = true;
+            continue;
         }
+
+        if(heeftA !== heeftB) return alert(`Vul bij set ${i + 1} beide scores in.`);
+        if(legeSetGezien) return alert('Laat geen lege set tussen ingevulde setstanden staan.');
+        if(wedstrijdBeslist) return alert('Er zijn setstanden ingevuld nadat de wedstrijd al beslist was. Controleer de setstanden.');
+
+        const a = parseInt(rawA);
+        const b = parseInt(rawB);
+        if(isNaN(a) || isNaN(b) || a < 0 || b < 0) return alert(`Set ${i + 1} bevat geen geldige stand.`);
+        if(a === b) return alert(`Set ${i + 1} kan niet gelijk eindigen.`);
+
+        sets.push({a, b});
+        if(a > b) setsA++;
+        if(b > a) setsB++;
+
+        if(setsA === 3 || setsB === 3) wedstrijdBeslist = true;
     }
 
-    if(sets.length === 0) return alert('Vul minimaal één setstand in.');
-    if(setsA === setsB) return alert('De wedstrijd kan niet gelijk eindigen. Controleer de setstanden.');
+    if(sets.length === 0) return alert('Vul de setstanden in.');
+    if(setsA !== 3 && setsB !== 3) return alert('Opslaan kan pas wanneer één speler drie sets heeft gewonnen.');
+    if(setsA === 3 && setsB === 3) return alert('Controleer de setstanden: beide spelers kunnen niet drie sets winnen.');
 
     const winnaarId = setsA > setsB ? spelerAId : spelerBId;
     const type = document.getElementById('w-type').value;
@@ -533,8 +581,8 @@ function bouwHistorieRij(w) {
         <td class="uitslag-cel"><strong>${w.uitslag}</strong> <span class="set-klein">(${w.setstanden || ''})</span></td>
         <td>
             <div class="actie-knoppen">
-                <button class="btn btn-sm btn-warning" onclick="bewerkWedstrijd('${w.id}')"><i class="fa-solid fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="verwijderWedstrijd('${w.id}')"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn btn-sm btn-warning" title="Wedstrijd wijzigen" aria-label="Wedstrijd wijzigen" onclick="bewerkWedstrijd('${w.id}')"><i class="fa-solid fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" title="Wedstrijd verwijderen" aria-label="Wedstrijd verwijderen" onclick="verwijderWedstrijd('${w.id}')"><i class="fa-solid fa-trash"></i></button>
             </div>
         </td>
     </tr>`;
@@ -884,6 +932,36 @@ function deelStandViaWhatsapp(type) {
     window.open(`https://wa.me/?text=${tekst}`, '_blank');
 }
 
+function deelZichtbareRanglijstViaWhatsapp() {
+    deelStandViaWhatsapp(geselecteerdRanglijstType);
+}
+
+function maakWhatsappHistorieTekst(type) {
+    const wedstrijden = appData.wedstrijden.filter(w => w.type === type);
+    const regels = [`Wedstrijdhistorie ${type}ladder`, ''];
+
+    if(wedstrijden.length === 0) {
+        regels.push('Geen wedstrijden gevonden.');
+        return regels.join('\n');
+    }
+
+    wedstrijden.forEach(w => {
+        const spelerA = naamSpeler(w.spelerAId);
+        const spelerB = naamSpeler(w.spelerBId);
+        const punten = formatPuntenCombinatie(w.puntenMutatieA, w.puntenMutatieB).replace(/<[^>]*>/g, '');
+        regels.push(`${formatDatum(w.datum)}: ${spelerA} - ${spelerB} ${punten}`.trim());
+        regels.push(`Uitslag: ${w.uitslag} (${w.setstanden || '-'})`);
+        regels.push('');
+    });
+
+    return regels.join('\n').trim();
+}
+
+function deelZichtbareHistorieViaWhatsapp() {
+    const tekst = encodeURIComponent(maakWhatsappHistorieTekst(geselecteerdHistorieType));
+    window.open(`https://wa.me/?text=${tekst}`, '_blank');
+}
+
 function wisselSpelerFormType(type) {
     const spelerType = document.getElementById('speler-type');
     if(spelerType) spelerType.value = type;
@@ -930,9 +1008,9 @@ function laadBeheerTabellen() {
             <td>${c.naam}</td><td>${c.type}</td>
             <td><span class="badge ${c.status === 'Actief' ? 'badge-active' : 'badge-archived'}">${c.status}</span></td>
             <td>
-                <button class="btn btn-sm" onclick="wijzigCompetitieNaam('${c.id}', '${escapeVoorOnclick(c.naam)}')"><i class="fa-solid fa-edit"></i> Naam</button>
-                <button class="btn btn-sm" style="background:#666;" onclick="beheerActie('reset-punten', '${c.id}')"><i class="fa-solid fa-undo"></i> Reset</button>
-                <button class="btn btn-sm btn-danger" onclick="verwijderCompetitie('${c.id}')"><i class="fa-solid fa-trash"></i> Wissen</button>
+                <button class="btn btn-sm" title="Competitienaam wijzigen" aria-label="Competitienaam wijzigen" onclick="wijzigCompetitieNaam('${c.id}', '${escapeVoorOnclick(c.naam)}')"><i class="fa-solid fa-edit"></i></button>
+                <button class="btn btn-sm" title="Punten resetten" aria-label="Punten resetten" style="background:#666;" onclick="beheerActie('reset-punten', '${c.id}')"><i class="fa-solid fa-undo"></i></button>
+                <button class="btn btn-sm btn-danger" title="Competitie verwijderen" aria-label="Competitie verwijderen" onclick="verwijderCompetitie('${c.id}')"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>`;
     });
@@ -1035,12 +1113,19 @@ async function wijzigCompetitieNaam(compId, huidigeNaam) {
     const naam = nieuweNaam.trim();
     if(!naam) return alert('Voer een naam in.');
 
-    await fetch('/api/competities/actie', {
+    const res = await fetch('/api/competities/actie', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ actie: 'competitie-wijzig-naam', competitieId: compId, extra: { naam } })
     });
-    laadData();
+
+    if(!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Onbekende fout.' }));
+        return alert('Fout: ' + err.error);
+    }
+
+    alert('Competitienaam opgeslagen.');
+    await laadData();
 }
 
 async function beheerActie(actie, compId = '') {
