@@ -581,8 +581,8 @@ function bouwHistorieRij(w) {
         <td class="uitslag-cel"><strong>${w.uitslag}</strong> <span class="set-klein">(${w.setstanden || ''})</span></td>
         <td>
             <div class="actie-knoppen">
-                <button class="btn btn-sm btn-warning" title="Wedstrijd wijzigen" aria-label="Wedstrijd wijzigen" onclick="bewerkWedstrijd('${w.id}')"><i class="fa-solid fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger" title="Wedstrijd verwijderen" aria-label="Wedstrijd verwijderen" onclick="verwijderWedstrijd('${w.id}')"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn btn-sm btn-edit" title="Wedstrijd wijzigen" aria-label="Wedstrijd wijzigen" onclick="bewerkWedstrijd('${w.id}')"><i class="fa-solid fa-edit"></i></button>
+                <button class="btn btn-sm btn-delete" title="Wedstrijd verwijderen" aria-label="Wedstrijd verwijderen" onclick="verwijderWedstrijd('${w.id}')"><i class="fa-solid fa-trash"></i></button>
             </div>
         </td>
     </tr>`;
@@ -994,8 +994,10 @@ function laadBeheerTabellen() {
         spelerTbody.innerHTML += `<tr>
             <td>${s.naam}</td><td class="punten-cel">${s.punten}</td><td>${s.elo}</td>
             <td>
-                <button class="btn btn-sm" onclick="startEditSpeler('${s.id}', '${escapeVoorOnclick(s.naam)}', '${s.type}', ${s.elo}, ${s.punten})"><i class="fa-solid fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="verwijderSpeler('${s.id}')"><i class="fa-solid fa-trash"></i></button>
+                <div class="actie-knoppen">
+                    <button class="btn btn-sm btn-edit" title="Speler wijzigen" aria-label="Speler wijzigen" onclick="startEditSpeler('${s.id}', '${escapeVoorOnclick(s.naam)}', '${s.type}', ${s.elo}, ${s.punten})"><i class="fa-solid fa-edit"></i></button>
+                    <button class="btn btn-sm btn-delete" title="Speler verwijderen" aria-label="Speler verwijderen" onclick="verwijderSpeler('${s.id}')"><i class="fa-solid fa-trash"></i></button>
+                </div>
             </td>
         </tr>`;
     });
@@ -1005,12 +1007,14 @@ function laadBeheerTabellen() {
     compTbody.innerHTML = '';
     appData.competities.forEach(c => {
         compTbody.innerHTML += `<tr>
-            <td>${c.naam}</td><td>${c.type}</td>
-            <td><span class="badge ${c.status === 'Actief' ? 'badge-active' : 'badge-archived'}">${c.status}</span></td>
-            <td>
-                <button class="btn btn-sm" title="Competitienaam wijzigen" aria-label="Competitienaam wijzigen" onclick="wijzigCompetitieNaam('${c.id}', '${escapeVoorOnclick(c.naam)}')"><i class="fa-solid fa-edit"></i></button>
-                <button class="btn btn-sm" title="Punten resetten" aria-label="Punten resetten" style="background:#666;" onclick="beheerActie('reset-punten', '${c.id}')"><i class="fa-solid fa-undo"></i></button>
-                <button class="btn btn-sm btn-danger" title="Competitie verwijderen" aria-label="Competitie verwijderen" onclick="verwijderCompetitie('${c.id}')"><i class="fa-solid fa-trash"></i></button>
+            <td class="comp-naam">${c.naam}</td><td class="comp-type">${c.type}</td>
+            <td class="comp-status"><span class="badge ${c.status === 'Actief' ? 'badge-active' : 'badge-archived'}">${c.status}</span></td>
+            <td class="comp-acties">
+                <div class="actie-knoppen">
+                    <button class="btn btn-sm btn-edit" title="Competitienaam wijzigen" aria-label="Competitienaam wijzigen" onclick="wijzigCompetitieNaam('${c.id}', '${escapeVoorOnclick(c.naam)}')"><i class="fa-solid fa-edit"></i></button>
+                    <button class="btn btn-sm btn-reset" title="Punten resetten" aria-label="Punten resetten" onclick="beheerActie('reset-punten', '${c.id}')"><i class="fa-solid fa-undo"></i></button>
+                    <button class="btn btn-sm btn-delete" title="Competitie verwijderen" aria-label="Competitie verwijderen" onclick="verwijderCompetitie('${c.id}')"><i class="fa-solid fa-trash"></i></button>
+                </div>
             </td>
         </tr>`;
     });
