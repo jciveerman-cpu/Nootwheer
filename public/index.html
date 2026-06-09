@@ -51,6 +51,7 @@
         .set-row input { width: 70px; text-align: center; }
         .live-uitslag { background: #e6f4ea; color: #137333; padding: 15px; border-radius: 4px; margin-top: 15px; font-weight: bold; text-align: center; }
         .set-klein { font-weight: normal; color: #777; font-size: 13px; margin-left: 10px; }
+        .dashboard-punten-mobile { display: none; margin-top: 3px; font-size: 12px; }
         .uitslag-kolom { width: 230px; white-space: nowrap; }
         .uitslag-cel { white-space: nowrap; }
         .punten-kolom { width: 90px; text-align: right; padding-right: 34px; }
@@ -372,6 +373,15 @@
             #dash-wedstrijden-table th:nth-child(1), #dash-wedstrijden-table td:nth-child(1) { width: 74px; }
             #dash-wedstrijden-table th:nth-child(2), #dash-wedstrijden-table td:nth-child(2) { width: 112px; }
             #dash-wedstrijden-table th:nth-child(3), #dash-wedstrijden-table td:nth-child(3) { width: 96px; }
+
+            #dash-wedstrijden-table .set-klein {
+                display: none !important;
+            }
+            #dash-wedstrijden-table .dashboard-punten-mobile {
+                display: block;
+                margin-left: 0;
+                line-height: 1.25;
+            }
             #historie-table-body td:nth-child(1) { width: 74px; }
             #historie-table-body td:nth-child(2) { width: 122px; }
             #historie-table-body td:nth-child(3) { width: 96px; }
