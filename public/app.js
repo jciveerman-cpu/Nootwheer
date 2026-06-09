@@ -566,7 +566,7 @@ function bouwWedstrijdRij(w) {
     return `<tr>
         <td class="datum-cel">${formatDatum(w.datum)}</td>
         <td class="wedstrijd-cel"><span class="wedstrijd-speler">${naamA} <span class="mobiel-streep">-</span></span><span class="desktop-separator"> - </span><span class="wedstrijd-speler">${naamB}</span></td>
-        <td class="uitslag-cel"><strong>${w.uitslag}</strong> <span class="set-klein">(${w.setstanden || ''})</span></td>
+        <td class="uitslag-cel"><strong>${w.uitslag}</strong> <span class="set-klein">(${w.setstanden || ''})</span><span class="dashboard-punten-mobile">${formatPuntenCombinatie(w.puntenMutatieA, w.puntenMutatieB)}</span></td>
     </tr>`;
 }
 
@@ -798,7 +798,7 @@ function maakSpelerHistorieWhatsappTekst() {
 function deelSpelerHistorieViaWhatsapp() {
     const tekst = maakSpelerHistorieWhatsappTekst();
     if(!tekst) return alert('Geen spelerhistorie beschikbaar om te delen.');
-    window.open(`https://wa.me/?text=${encodeURIComponent(tekst)}`, '_blank');
+    deelTekstViaWhatsapp(tekst);
 }
 
 function keerUitslagOm(uitslag) {
@@ -927,9 +927,26 @@ function maakWhatsappStandTekst(type) {
     return regels.join('\n');
 }
 
+function deelTekstViaWhatsapp(tekst) {
+    if(!tekst || !tekst.trim()) {
+        alert('Er is geen tekst om te delen.');
+        return;
+    }
+
+    const schoneTekst = tekst.trim();
+
+    if(navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        navigator.share({ text: schoneTekst }).catch(() => {
+            window.open(`https://wa.me/?text=${encodeURIComponent(schoneTekst)}`, '_blank', 'noopener,noreferrer');
+        });
+        return;
+    }
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(schoneTekst)}`, '_blank', 'noopener,noreferrer');
+}
+
 function deelStandViaWhatsapp(type) {
-    const tekst = encodeURIComponent(maakWhatsappStandTekst(type));
-    window.open(`https://wa.me/?text=${tekst}`, '_blank');
+    deelTekstViaWhatsapp(maakWhatsappStandTekst(type));
 }
 
 function deelZichtbareRanglijstViaWhatsapp() {
@@ -958,8 +975,7 @@ function maakWhatsappHistorieTekst(type) {
 }
 
 function deelZichtbareHistorieViaWhatsapp() {
-    const tekst = encodeURIComponent(maakWhatsappHistorieTekst(geselecteerdHistorieType));
-    window.open(`https://wa.me/?text=${tekst}`, '_blank');
+    deelTekstViaWhatsapp(maakWhatsappHistorieTekst(geselecteerdHistorieType));
 }
 
 function wisselSpelerFormType(type) {
@@ -1144,4 +1160,18 @@ async function beheerActie(actie, compId = '') {
     laadData();
 }
 
-window.onload = () => { document.getElementById('login-screen').style.display = 'flex'; };
+window.onload = () => {
+    document.getElementById('login-screen').style.display = 'flex';
+
+    ['login-username', 'login-password'].forEach(id => {
+        const veld = document.getElementById(id);
+        if(veld) {
+            veld.addEventListener('keydown', e => {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    behandelInloggen();
+                }
+            });
+        }
+    });
+};
