@@ -963,8 +963,8 @@ function maakWhatsappHistorieTekst(type) {
     }
 
     wedstrijden.forEach(w => {
-        const spelerA = naamSpeler(w.spelerAId);
-        const spelerB = naamSpeler(w.spelerBId);
+        const spelerA = getSpelerNaam(w.spelerAId);
+        const spelerB = getSpelerNaam(w.spelerBId);
         const punten = formatPuntenCombinatie(w.puntenMutatieA, w.puntenMutatieB).replace(/<[^>]*>/g, '');
         regels.push(`${formatDatum(w.datum)}: ${spelerA} - ${spelerB} ${punten}`.trim());
         regels.push(`Uitslag: ${w.uitslag} (${w.setstanden || '-'})`);
