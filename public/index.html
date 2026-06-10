@@ -56,6 +56,11 @@
         .uitslag-cel { white-space: nowrap; }
         .punten-kolom { width: 90px; text-align: right; padding-right: 34px; }
         .punten-cel { text-align: right; padding-right: 34px; }
+        .saldo-kolom { width: 78px; text-align: right; white-space: nowrap; }
+        .saldo-cel { text-align: right; white-space: nowrap; }
+        .elo-cel { white-space: nowrap; }
+        .desktop-saldo { display: table-cell; }
+        .mobile-label { display: none; }
         .datum-cel { white-space: nowrap; }
         .positie-kolom { width: 80px; }
         .elo-kolom { width: 80px; white-space: nowrap; }
@@ -350,6 +355,9 @@
             th, td { padding: 8px 6px; font-size: 13px; }
             .positie-kolom { width: 42px !important; }
             .punten-kolom, .punten-cel { width: 58px !important; text-align: right; padding-right: 8px !important; }
+            .desktop-saldo { display: none !important; }
+            .desktop-label { display: none; }
+            .mobile-label { display: inline; }
             .elo-kolom { width: 54px !important; }
             .datum-kolom, .datum-cel { width: 74px !important; font-size: 12px; }
             .uitslag-kolom, .uitslag-cel { width: 96px !important; min-width: 96px; white-space: normal; }
@@ -420,8 +428,14 @@
                 padding-right: 6px !important;
             }
             .compact-ranglijst-table th:nth-child(4),
-            .compact-ranglijst-table td:nth-child(4) {
-                width: 42px !important;
+            .compact-ranglijst-table td:nth-child(4),
+            .compact-ranglijst-table th:nth-child(5),
+            .compact-ranglijst-table td:nth-child(5) {
+                display: none !important;
+            }
+            .compact-ranglijst-table th:nth-child(6),
+            .compact-ranglijst-table td:nth-child(6) {
+                width: 44px !important;
                 text-align: right !important;
                 padding-right: 2px !important;
             }
@@ -627,7 +641,7 @@
                 <div class="card" style="margin-bottom:0;">
                     <h3><i class="fa-solid fa-list-ol"></i> Ranglijst</h3>
                     <table class="compact-ranglijst-table">
-                        <thead><tr><th class="positie-kolom">Pos</th><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
+                        <thead><tr><th class="positie-kolom">Pos</th><th>Naam</th><th class="punten-kolom"><span class="desktop-label">Ladderpunten</span><span class="mobile-label">Punten</span></th><th class="saldo-kolom desktop-saldo">Sets</th><th class="saldo-kolom desktop-saldo">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
                         <tbody id="dash-top5-table-body"></tbody>
                     </table>
                 </div>
@@ -658,7 +672,7 @@
             <div class="card" style="margin-bottom:0;">
                 <h3 id="ranglijst-titel"><i class="fa-solid fa-list-ol"></i> Senioren Ranglijst</h3>
                 <table class="compact-ranglijst-table">
-                    <thead><tr><th class="positie-kolom">Positie</th><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
+                    <thead><tr><th class="positie-kolom">Positie</th><th>Naam</th><th class="punten-kolom"><span class="desktop-label">Ladderpunten</span><span class="mobile-label">Punten</span></th><th class="saldo-kolom desktop-saldo">Sets</th><th class="saldo-kolom desktop-saldo">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
                     <tbody id="ranglijst-table-body"></tbody>
                 </table>
             </div>
@@ -717,7 +731,7 @@
             </div>
             <div class="card">
                 <table>
-                    <thead><tr><th class="datum-kolom">Datum</th><th class="wedstrijd-kolom">Wedstrijd</th><th class="uitslag-kolom">Uitslag</th><th class="actie-kolom">Acties</th></tr></thead>
+                    <thead><tr><th class="datum-kolom">Datum</th><th class="wedstrijd-kolom">Wedstrijd</th><th class="uitslag-kolom">Uitslag</th><th class="saldo-kolom desktop-saldo">Sets</th><th class="saldo-kolom desktop-saldo">Punten</th><th class="actie-kolom">Acties</th></tr></thead>
                     <tbody id="historie-table-body"></tbody>
                 </table>
             </div>
@@ -793,10 +807,13 @@
             <div class="modal-header"><h2>Spelregels laddercompetitie</h2><button class="modal-close" onclick="toggleHelpmenu()">&times;</button></div>
             <div class="modal-body">
                 <ul class="spelregels-lijst">
-                    <li>De puntentelling wordt berekend op basis van de actuele ranglijst op het moment van invoeren.</li>
-                    <li>Winst tegen een lager geplaatste speler: winnaar krijgt +1 punt, verliezer krijgt 0 punten.</li>
-                    <li>Winst tegen een hoger geplaatste speler: winnaar krijgt +2 punten, verliezer verliest 1 punt.</li>
-                    <li>Bij gelijke punten wordt de ranglijst gesorteerd op ELO-rating.</li>
+                    <li>Bij de beginstand van een competitie wordt de ranglijst weergegeven op basis van ELO.</li>
+                    <li>Na het invoeren van de eerste wedstrijd wordt de ranglijst bepaald op basis van ladderpunten, daarna sets en daarna punten.</li>
+                    <li>Sets betekent: gewonnen sets min verloren sets.</li>
+                    <li>Punten betekent: alle gemaakte punten in de gespeelde sets min alle tegenpunten.</li>
+                    <li>Winst tegen een lager geplaatste speler: winnaar krijgt +1 ladderpunt, verliezer krijgt 0 ladderpunten.</li>
+                    <li>Winst tegen een hoger geplaatste speler: winnaar krijgt +2 ladderpunten, verliezer verliest 1 ladderpunt.</li>
+                    <li>Als ladderpunten, sets en punten volledig gelijk zijn, wordt ELO als laatste ordening gebruikt.</li>
                 </ul>
                 <p class="spelregels-disclaimer">De informatie op deze website is openbaar. De deelnemers aan de laddercompetitie stemmen ermee in dat deze informatie kan worden gezien en gedeeld door derden.</p>
             </div>
