@@ -142,10 +142,56 @@ function getISOWeeknummer(datum) {
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
+
+function berekenSpelerSaldiServer(db, type) {
+    const saldi = {};
+    db.spelers
+        .filter(s => s.type === type && s.actief)
+        .forEach(s => {
+            saldi[s.id] = { sets: 0, punten: 0 };
+        });
+
+    db.wedstrijden
+        .filter(w => w.type === type && Array.isArray(w.sets))
+        .forEach(w => {
+            if(!saldi[w.spelerAId]) saldi[w.spelerAId] = { sets: 0, punten: 0 };
+            if(!saldi[w.spelerBId]) saldi[w.spelerBId] = { sets: 0, punten: 0 };
+
+            w.sets.forEach(set => {
+                const a = Number(set.a);
+                const b = Number(set.b);
+                if(Number.isNaN(a) || Number.isNaN(b)) return;
+                if(a > b) {
+                    saldi[w.spelerAId].sets += 1;
+                    saldi[w.spelerBId].sets -= 1;
+                } else if(b > a) {
+                    saldi[w.spelerBId].sets += 1;
+                    saldi[w.spelerAId].sets -= 1;
+                }
+                saldi[w.spelerAId].punten += (a - b);
+                saldi[w.spelerBId].punten += (b - a);
+            });
+        });
+
+    return saldi;
+}
+
 function bepaalActueleRanglijst(db, type) {
+    const saldi = berekenSpelerSaldiServer(db, type);
     return db.spelers
         .filter(s => s.type === type && s.actief)
-        .sort((a, b) => b.punten - a.punten || b.elo - a.elo || a.naam.localeCompare(b.naam));
+        .map(s => ({
+            ...s,
+            setsSaldo: saldi[s.id]?.sets || 0,
+            puntenSaldo: saldi[s.id]?.punten || 0
+        }))
+        .sort((a, b) =>
+            b.punten - a.punten ||
+            b.setsSaldo - a.setsSaldo ||
+            b.puntenSaldo - a.puntenSaldo ||
+            b.elo - a.elo ||
+            a.naam.localeCompare(b.naam)
+        );
 }
 
 function bepaalPositie(ranglijst, spelerId) {
