@@ -260,6 +260,87 @@ function wisselBeheerSpelersTab(type) {
     laadBeheerTabellen();
 }
 
+
+function berekenSpelerSaldi(type) {
+    const saldi = {};
+    appData.spelers
+        .filter(s => s.type === type && s.actief)
+        .forEach(s => {
+            saldi[s.id] = { sets: 0, punten: 0 };
+        });
+
+    appData.wedstrijden
+        .filter(w => w.type === type && Array.isArray(w.sets))
+        .forEach(w => {
+            if(!saldi[w.spelerAId]) saldi[w.spelerAId] = { sets: 0, punten: 0 };
+            if(!saldi[w.spelerBId]) saldi[w.spelerBId] = { sets: 0, punten: 0 };
+
+            w.sets.forEach(set => {
+                const a = Number(set.a);
+                const b = Number(set.b);
+                if(Number.isNaN(a) || Number.isNaN(b)) return;
+
+                if(a > b) {
+                    saldi[w.spelerAId].sets += 1;
+                    saldi[w.spelerBId].sets -= 1;
+                } else if(b > a) {
+                    saldi[w.spelerBId].sets += 1;
+                    saldi[w.spelerAId].sets -= 1;
+                }
+
+                saldi[w.spelerAId].punten += (a - b);
+                saldi[w.spelerBId].punten += (b - a);
+            });
+        });
+
+    return saldi;
+}
+
+function verrijkSpelerMetSaldi(speler, saldi) {
+    const spelerSaldi = saldi[speler.id] || { sets: 0, punten: 0 };
+    return {
+        ...speler,
+        setsSaldo: spelerSaldi.sets,
+        puntenSaldo: spelerSaldi.punten
+    };
+}
+
+function formatSaldoWaarde(waarde) {
+    const getal = Number(waarde || 0);
+    if(getal > 0) return `+${getal}`;
+    return String(getal);
+}
+
+function berekenWedstrijdSaldi(w) {
+    let setsA = 0;
+    let setsB = 0;
+    let puntenA = 0;
+    let puntenB = 0;
+
+    if(Array.isArray(w.sets)) {
+        w.sets.forEach(set => {
+            const a = Number(set.a);
+            const b = Number(set.b);
+            if(Number.isNaN(a) || Number.isNaN(b)) return;
+            if(a > b) setsA += 1;
+            else if(b > a) setsB += 1;
+            puntenA += a;
+            puntenB += b;
+        });
+    }
+
+    return {
+        setsA: setsA - setsB,
+        setsB: setsB - setsA,
+        puntenA: puntenA - puntenB,
+        puntenB: puntenB - puntenA
+    };
+}
+
+function formatWedstrijdSaldoCombinatie(waardeA, waardeB) {
+    return `${formatSaldoWaarde(waardeA)}/${formatSaldoWaarde(waardeB)}`;
+}
+
 function genereerRanglijstTabelRijen(spelersLijst) {
     let html = '';
     spelersLijst.forEach((s, i) => {
@@ -271,9 +352,11 @@ function genereerRanglijstTabelRijen(spelersLijst) {
 
         html += `<tr class="${posKlasse}">
             <td>${medaille}</td>
-            <td><span class="clickable-player" onclick="toonSpelerHistorie('${s.id}')">${s.naam}</span></td>
+            <td><span class="clickable-player" onclick="toonSpelerHistorie('${s.id}')">${escapeHtml(s.naam)}</span></td>
             <td class="punten-cel">${s.punten}</td>
-            <td>${s.elo}</td>
+            <td class="saldo-cel desktop-saldo">${formatSaldoWaarde(s.setsSaldo)}</td>
+            <td class="saldo-cel desktop-saldo">${formatSaldoWaarde(s.puntenSaldo)}</td>
+            <td class="elo-cel">${s.elo}</td>
         </tr>`;
     });
     return html;
@@ -291,21 +374,7 @@ function laadRanglijst() {
     const titel = document.getElementById('ranglijst-titel');
     if(titel) titel.innerHTML = `<i class="fa-solid fa-list-ol"></i> ${geselecteerdRanglijstType} Ranglijst`;
 
-    tbody.innerHTML = getGesorteerdeSpelers(geselecteerdRanglijstType)
-        .slice(0, 10)
-        .map((s, index) => {
-            let posKlasse = '';
-            let medaille = `<strong>${index+1}</strong>`;
-            if (index === 0) { posKlasse = 'goud'; medaille = `<i class="fa-solid fa-medal trofee"></i> 1`; }
-            else if (index === 1) { posKlasse = 'zilver'; medaille = `<i class="fa-solid fa-medal trofee"></i> 2`; }
-            else if (index === 2) { posKlasse = 'brons'; medaille = `<i class="fa-solid fa-medal trofee"></i> 3`; }
-            return `<tr class="${posKlasse}">
-                <td>${medaille}</td>
-                <td><span class="clickable-player" onclick="toonSpelerHistorie('${s.id}')">${escapeHtml(s.naam)}</span></td>
-                <td class="punten-cel">${s.punten}</td>
-                <td>${s.elo}</td>
-            </tr>`;
-        }).join('');
+    tbody.innerHTML = genereerRanglijstTabelRijen(getGesorteerdeSpelers(geselecteerdRanglijstType).slice(0, 10));
 }
 
 function wisselInvoerTab(type) {
@@ -574,11 +643,14 @@ function bouwHistorieRij(w) {
     const naamA = naamWedstrijd(w.spelerAId, w.winnaarId);
     const naamB = naamWedstrijd(w.spelerBId, w.winnaarId);
     const puntenCombi = formatPuntenCombinatie(w.puntenMutatieA, w.puntenMutatieB);
+    const saldi = berekenWedstrijdSaldi(w);
 
     return `<tr>
         <td class="datum-cel">${formatDatum(w.datum)}</td>
         <td class="wedstrijd-cel"><span class="wedstrijd-speler">${naamA}</span><span class="desktop-separator"> - </span><span class="wedstrijd-speler">${naamB}</span> ${puntenCombi}</td>
         <td class="uitslag-cel"><strong>${w.uitslag}</strong> <span class="set-klein">(${w.setstanden || ''})</span></td>
+        <td class="saldo-cel desktop-saldo">${formatWedstrijdSaldoCombinatie(saldi.setsA, saldi.setsB)}</td>
+        <td class="saldo-cel desktop-saldo">${formatWedstrijdSaldoCombinatie(saldi.puntenA, saldi.puntenB)}</td>
         <td>
             <div class="actie-knoppen">
                 <button class="btn btn-sm btn-edit" title="Wedstrijd wijzigen" aria-label="Wedstrijd wijzigen" onclick="bewerkWedstrijd('${w.id}')"><i class="fa-solid fa-edit"></i></button>
@@ -600,9 +672,7 @@ function laadWedstrijdenDashboard(type) {
     const top5body = document.getElementById('dash-top5-table-body');
     if(!top5body) return;
 
-    const alleGesorteerdeSpelers = appData.spelers
-        .filter(s => s.type === type && s.actief)
-        .sort((a, b) => b.punten - a.punten || b.elo - a.elo || a.naam.localeCompare(b.naam));
+    const alleGesorteerdeSpelers = getGesorteerdeSpelers(type);
     top5body.innerHTML = genereerRanglijstTabelRijen(alleGesorteerdeSpelers.slice(0, 10));
 
     const tbody = document.getElementById('dash-wedstrijden-table').querySelector('tbody');
@@ -727,7 +797,8 @@ function renderSpelerHistorie() {
     }
 
     titel.innerText = `Wedstrijdhistorie van ${speler.naam}`;
-    info.innerText = `Actuele ranglijst: ${speler.punten} punten | ELO: ${speler.elo} | Gekozen ladder: ${geselecteerdSpelerHistorieType}`;
+    const spelerSaldi = berekenSpelerSaldi(geselecteerdSpelerHistorieType)[speler.id] || { sets: 0, punten: 0 };
+    info.innerText = `Actuele ranglijst: ${speler.punten} ladderpunten | Sets: ${formatSaldoWaarde(spelerSaldi.sets)} | Punten: ${formatSaldoWaarde(spelerSaldi.punten)} | ELO: ${speler.elo} | Gekozen ladder: ${geselecteerdSpelerHistorieType}`;
 
     const wedstrijden = appData.wedstrijden.filter(w =>
         w.type === geselecteerdSpelerHistorieType &&
@@ -768,7 +839,7 @@ function maakSpelerHistorieWhatsappTekst() {
     const regels = [
         `Wedstrijdhistorie ${speler.naam}`,
         `${geselecteerdSpelerHistorieType}ladder`,
-        `Actuele ranglijst: ${speler.punten} punten | ELO: ${speler.elo}`,
+        `Actuele ranglijst: ${speler.punten} ladderpunten | Sets: ${formatSaldoWaarde((berekenSpelerSaldi(geselecteerdSpelerHistorieType)[speler.id] || { sets: 0 }).sets)} | Punten: ${formatSaldoWaarde((berekenSpelerSaldi(geselecteerdSpelerHistorieType)[speler.id] || { punten: 0 }).punten)} | ELO: ${speler.elo}`,
         ''
     ];
 
@@ -810,9 +881,17 @@ function keerUitslagOm(uitslag) {
 
 
 function getGesorteerdeSpelers(type) {
+    const saldi = berekenSpelerSaldi(type);
     return appData.spelers
         .filter(s => s.type === type && s.actief)
-        .sort((a, b) => b.punten - a.punten || b.elo - a.elo || a.naam.localeCompare(b.naam));
+        .map(s => verrijkSpelerMetSaldi(s, saldi))
+        .sort((a, b) =>
+            b.punten - a.punten ||
+            b.setsSaldo - a.setsSaldo ||
+            b.puntenSaldo - a.puntenSaldo ||
+            b.elo - a.elo ||
+            a.naam.localeCompare(b.naam)
+        );
 }
 
 function getOverzichtDatum() {
@@ -822,12 +901,14 @@ function getOverzichtDatum() {
 
 function maakStandRijenVoorPrint(type) {
     const spelers = getGesorteerdeSpelers(type);
-    if(spelers.length === 0) return '<tr><td colspan="4">Geen actieve spelers gevonden.</td></tr>';
+    if(spelers.length === 0) return '<tr><td colspan="6">Geen actieve spelers gevonden.</td></tr>';
     return spelers.map((s, index) => `
         <tr>
             <td>${index + 1}</td>
             <td>${escapeHtml(s.naam)}</td>
             <td class="num">${s.punten}</td>
+            <td class="num">${formatSaldoWaarde(s.setsSaldo)}</td>
+            <td class="num">${formatSaldoWaarde(s.puntenSaldo)}</td>
             <td class="num">${s.elo}</td>
         </tr>
     `).join('');
@@ -835,18 +916,21 @@ function maakStandRijenVoorPrint(type) {
 
 function maakWedstrijdRijenVoorPrint(type, weeknummer) {
     const wedstrijden = appData.wedstrijden.filter(w => w.type === type && Number(w.week) === Number(weeknummer));
-    if(wedstrijden.length === 0) return '<tr><td colspan="4">Geen wedstrijden gevonden voor deze week.</td></tr>';
+    if(wedstrijden.length === 0) return '<tr><td colspan="6">Geen wedstrijden gevonden voor deze week.</td></tr>';
 
     return wedstrijden.map(w => {
         const naamA = `${escapeHtml(getSpelerNaam(w.spelerAId))}${w.winnaarId === w.spelerAId ? ' *' : ''}`;
         const naamB = `${escapeHtml(getSpelerNaam(w.spelerBId))}${w.winnaarId === w.spelerBId ? ' *' : ''}`;
-        const punten = (w.puntenMutatieA === undefined || w.puntenMutatieB === undefined) ? '' : ` (${formatPuntenTekst(w.puntenMutatieA)}/${formatPuntenTekst(w.puntenMutatieB)})`;
+        const ladderPunten = (w.puntenMutatieA === undefined || w.puntenMutatieB === undefined) ? '' : ` (${formatPuntenTekst(w.puntenMutatieA)}/${formatPuntenTekst(w.puntenMutatieB)})`;
+        const saldi = berekenWedstrijdSaldi(w);
         return `
             <tr>
                 <td>${formatDatum(w.datum)}</td>
-                <td>${naamA} - ${naamB}${punten}</td>
+                <td>${naamA} - ${naamB}${ladderPunten}</td>
                 <td><strong>${escapeHtml(w.uitslag)}</strong></td>
                 <td>${escapeHtml(w.setstanden || '')}</td>
+                <td class="num">${formatWedstrijdSaldoCombinatie(saldi.setsA, saldi.setsB)}</td>
+                <td class="num">${formatWedstrijdSaldoCombinatie(saldi.puntenA, saldi.puntenB)}</td>
             </tr>
         `;
     }).join('');
@@ -893,7 +977,7 @@ function printOverzicht(type) {
 
     <h2>Huidige stand</h2>
     <table>
-        <thead><tr><th style="width:80px;">Positie</th><th>Naam</th><th style="width:90px;">Punten</th><th style="width:90px;">ELO</th></tr></thead>
+        <thead><tr><th style="width:70px;">Positie</th><th>Naam</th><th style="width:90px;">Ladderpunten</th><th style="width:80px;">Sets</th><th style="width:90px;">Punten</th><th style="width:80px;">ELO</th></tr></thead>
         <tbody>${maakStandRijenVoorPrint(type)}</tbody>
     </table>
 
@@ -902,7 +986,7 @@ function printOverzicht(type) {
     <div class="meta"><strong>${titel}</strong><br>Gespeelde wedstrijden week ${weeknummer}</div>
 
     <table>
-        <thead><tr><th style="width:110px;">Datum</th><th>Wedstrijd</th><th style="width:80px;">Uitslag</th><th>Setstanden</th></tr></thead>
+        <thead><tr><th style="width:110px;">Datum</th><th>Wedstrijd</th><th style="width:80px;">Uitslag</th><th>Setstanden</th><th style="width:80px;">Sets</th><th style="width:90px;">Punten</th></tr></thead>
         <tbody>${maakWedstrijdRijenVoorPrint(type, weeknummer)}</tbody>
     </table>
     <div class="klein">* = winnaar. Punten tussen haakjes staan in de volgorde speler A / speler B.</div>
@@ -920,9 +1004,9 @@ function printOverzicht(type) {
 function maakWhatsappStandTekst(type) {
     const datum = getOverzichtDatum();
     const weeknummer = bepaalISOWeeknummer(datum);
-    const regels = [`Ranglijst ${type}ladder - week ${weeknummer}`, `Overzichtdatum: ${formatDatum(datum)}`, ''];
+    const regels = [`Ranglijst ${type}ladder - week ${weeknummer}`, `Overzichtdatum: ${formatDatum(datum)}`, '', 'Pos. Naam - Ladderpunten | Sets | Punten'];
     getGesorteerdeSpelers(type).forEach((s, index) => {
-        regels.push(`${index + 1}. ${s.naam} - ${s.punten} punten`);
+        regels.push(`${index + 1}. ${s.naam} - ${s.punten} | ${formatSaldoWaarde(s.setsSaldo)} | ${formatSaldoWaarde(s.puntenSaldo)}`);
     });
     return regels.join('\n');
 }
@@ -965,9 +1049,11 @@ function maakWhatsappHistorieTekst(type) {
     wedstrijden.forEach(w => {
         const spelerA = getSpelerNaam(w.spelerAId);
         const spelerB = getSpelerNaam(w.spelerBId);
-        const punten = formatPuntenCombinatie(w.puntenMutatieA, w.puntenMutatieB).replace(/<[^>]*>/g, '');
-        regels.push(`${formatDatum(w.datum)}: ${spelerA} - ${spelerB} ${punten}`.trim());
+        const ladderPunten = formatPuntenCombinatie(w.puntenMutatieA, w.puntenMutatieB).replace(/<[^>]*>/g, '');
+        const saldi = berekenWedstrijdSaldi(w);
+        regels.push(`${formatDatum(w.datum)}: ${spelerA} - ${spelerB} ${ladderPunten}`.trim());
         regels.push(`Uitslag: ${w.uitslag} (${w.setstanden || '-'})`);
+        regels.push(`Sets: ${formatWedstrijdSaldoCombinatie(saldi.setsA, saldi.setsB)} | Punten: ${formatWedstrijdSaldoCombinatie(saldi.puntenA, saldi.puntenB)}`);
         regels.push('');
     });
 
