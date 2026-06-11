@@ -1,470 +1,842 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const bodyParser = require('body-parser');
-const { Pool } = require('pg');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-const DB_FILE = path.join(__dirname, 'db.json');
-const DATABASE_URL = process.env.DATABASE_URL;
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTV Het Nootwheer - Laddercompetitie</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { display: flex; background: #f4f6f9; height: 100vh; overflow: hidden; }
+        .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #062b5e; display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-card { background: white; padding: 40px; border-radius: 8px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .login-logo { width: 95px; height: auto; margin-bottom: 15px; }
+        .sidebar { width: 260px; background: #0a3d82; color: white; display: flex; flex-direction: column; }
+        .logo-area { padding: 20px; text-align: center; background: #062b5e; border-bottom: 2px solid #cc1111; }
+        .logo-img { width: 90px; height: auto; margin-bottom: 10px; }
+        .logo-area h2 { font-size: 18px; }
+        .logo-area p { font-size: 11px; color: #ffcc00; font-weight: bold; }
+        .mobile-menu-btn { display: none; background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.35); border-radius: 6px; padding: 8px 10px; font-size: 18px; cursor: pointer; }
+        .nav-menu { list-style: none; margin-top: 15px; flex: 1; display: flex; flex-direction: column; }
+        .nav-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; font-size: 14px; }
+        .nav-item:hover, .nav-item.active { background: #cc1111; }
+        .nav-admin-only { border-left: 4px solid #ffcc00; display: none; }
+        .sidebar-copyright { padding: 10px 20px 14px; font-size: 12px; color: rgba(255,255,255,0.75); }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .app-footer { margin-top: auto; padding: 10px 30px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #e0e0e0; background: #f4f6f9; }
+        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e0e0; }
+        .view-container { padding: 30px; display: none; }
+        .view-container.active { display: block; }
+        .dashboard-split-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        .ranglijst-split-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 10px; }
+        .card { background: white; padding: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card h3 { font-size: 13px; color: #666; text-transform: uppercase; margin-bottom: 10px; }
+        .card .value { font-size: 24px; font-weight: bold; color: #333; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+        th { background: #f8f9fa; color: #555; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn { background: #0a3d82; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn:hover { background: #062b5e; }
+        .btn-danger { background: #cc1111; }
+        .btn-danger:hover { background: #990000; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .tab-btn { background: #e0e0e0; color: #333; padding: 8px 16px; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        .tab-btn.active { background: #0a3d82; color: white; }
+        .set-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+        .set-row input { width: 70px; text-align: center; }
+        .live-uitslag { background: #e6f4ea; color: #137333; padding: 15px; border-radius: 4px; margin-top: 15px; font-weight: bold; text-align: center; }
+        .set-klein { font-weight: normal; color: #777; font-size: 13px; margin-left: 10px; }
+        .dashboard-punten-mobile { display: none; margin-top: 3px; font-size: 12px; }
+        .uitslag-kolom { width: 230px; white-space: nowrap; }
+        .uitslag-cel { white-space: nowrap; }
+        .punten-kolom { width: 90px; text-align: right; padding-right: 34px; }
+        .punten-cel { text-align: right; padding-right: 34px; }
+        .saldo-kolom { width: 78px; text-align: right; white-space: nowrap; }
+        .saldo-cel { text-align: right; white-space: nowrap; }
+        .elo-cel { white-space: nowrap; }
+        .desktop-saldo { display: table-cell; }
+        .mobile-label { display: none; }
+        .datum-cel { white-space: nowrap; }
+        .positie-kolom { width: 80px; }
+        .elo-kolom { width: 80px; white-space: nowrap; }
+        .datum-kolom { width: 100px; white-space: nowrap; }
+        .wedstrijd-kolom { min-width: 160px; }
+        .actie-kolom { width: 115px; white-space: nowrap; }
+        .wedstrijd-cel { min-width: 160px; }
+        .mobiel-streep { display: none; }
+        .goud { color: #d4af37; font-weight: bold; background: #fffdf0; }
+        .zilver { color: #aaa9ad; font-weight: bold; background: #f7f7f8; }
+        .brons { color: #cd7f32; font-weight: bold; background: #faf5f0; }
+        .trofee { font-size: 16px; margin-right: 5px; }
+        .clickable-player { color: inherit; font-weight: normal; cursor: pointer; text-decoration: none; }
+        .punten-plus { color: #137333; font-weight: 700; white-space: nowrap; }
+        .punten-min { color: #cc1111; font-weight: 700; white-space: nowrap; }
+        .punten-neutraal { color: #777; white-space: nowrap; }
+        .wv-cel { font-weight: 700; white-space: nowrap; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; justify-content: center; align-items: center; z-index: 10000; padding: 24px; }
+        .modal-content { background: white; width: min(92vw, 760px); max-height: 88vh; overflow-y: auto; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
+        .modal-content.modal-breed { width: min(96vw, 1240px); }
+        .modal-header { background: #0a3d82; color: white; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        .modal-header h2 { font-size: 24px; }
+        .modal-close { background: transparent; color: white; border: none; font-size: 28px; cursor: pointer; }
+        .modal-body { padding: 24px; }
+        .modal-tabs { display: flex; gap: 10px; margin-bottom: 16px; }
+        .speler-info { font-size: 18px; color: #555; margin-bottom: 16px; }
+        #speler-historie-table th:nth-child(1), #speler-historie-table td:nth-child(1) { width: 120px; white-space: nowrap; }
+        #speler-historie-table th:nth-child(2), #speler-historie-table td:nth-child(2) { width: 70px; }
+        #speler-historie-table th:nth-child(5), #speler-historie-table td:nth-child(5) { width: 70px; white-space: nowrap; }
+        #speler-historie-table th:nth-child(6), #speler-historie-table td:nth-child(6) { width: 100px; white-space: nowrap; }
+        .spelregels-lijst { padding-left: 20px; line-height: 1.7; }
+        .spelregels-disclaimer { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e0e0e0; color: #555; line-height: 1.5; font-size: 14px; }
+        .overzicht-acties { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+        .overzicht-acties .form-group { width: 190px; margin-bottom: 0; }
+        .speler-zoek-wrapper { position: relative; }
+        .speler-hint { font-size: 12px; color: #666; margin-top: 5px; }
+        .veld-waarschuwing { display: none; color: #cc1111; font-weight: 600; font-size: 12px; margin-top: 5px; }
+        .input-waarschuwing { border-color: #cc1111 !important; background: #fff5f5; }
+        .form-status { display: none; background: #fff4e5; color: #7a3b00; padding: 10px 12px; border-radius: 4px; margin-bottom: 15px; font-weight: 600; }
+        .actie-knoppen { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-edit { background: #0a3d82; }
+        .btn-edit:hover { background: #062b5e; }
+        .btn-reset { background: #666; }
+        .btn-reset:hover { background: #555; }
+        .btn-delete { background: #cc1111; }
+        .btn-delete:hover { background: #990000; }
+        .tab-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .beheer-comp-table .actie-knoppen { flex-wrap: nowrap; }
 
-let pool = null;
-
-app.use(bodyParser.json({ limit: '2mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
-
-function maakLegeDB() {
-    return {
-        competities: [],
-        beheerders: [{ username: 'admin', password: 'admin' }],
-        spelerLogin: { username: 'speler', password: 'speler' },
-        spelers: [],
-        wedstrijden: [],
-        snapshots: {},
-        aanwezigheid: {}
-    };
-}
-
-function normaliseerDB(data) {
-    const db = data && typeof data === 'object' ? data : maakLegeDB();
-    db.competities = Array.isArray(db.competities) ? db.competities : [];
-    db.beheerders = Array.isArray(db.beheerders) ? db.beheerders : [{ username: 'admin', password: 'admin' }];
-    db.spelerLogin = db.spelerLogin || { username: 'speler', password: 'speler' };
-    db.spelers = Array.isArray(db.spelers) ? db.spelers : [];
-    db.wedstrijden = Array.isArray(db.wedstrijden) ? db.wedstrijden : [];
-    db.snapshots = db.snapshots || {};
-    db.aanwezigheid = db.aanwezigheid || {};
-    return db;
-}
-
-function leesLokaleDB() {
-    if (!fs.existsSync(DB_FILE)) return maakLegeDB();
-    return normaliseerDB(JSON.parse(fs.readFileSync(DB_FILE, 'utf8')));
-}
-
-function schrijfLokaleDB(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(normaliseerDB(data), null, 2), 'utf8');
-}
-
-function getSslConfig(connectionString) {
-    if (!connectionString) return false;
-    if (connectionString.includes('localhost') || connectionString.includes('127.0.0.1')) return false;
-    return { rejectUnauthorized: false };
-}
-
-async function initOpslag() {
-    if (!DATABASE_URL) {
-        console.log('Geen DATABASE_URL gevonden. De app gebruikt lokaal db.json.');
-        return;
-    }
-
-    pool = new Pool({
-        connectionString: DATABASE_URL,
-        ssl: getSslConfig(DATABASE_URL)
-    });
-
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS app_state (
-            id INTEGER PRIMARY KEY,
-            data JSONB NOT NULL,
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    `);
-
-    const bestaandeData = await pool.query('SELECT id FROM app_state WHERE id = 1');
-    if (bestaandeData.rowCount === 0) {
-        const startData = leesLokaleDB();
-        await pool.query(
-            'INSERT INTO app_state (id, data, updated_at) VALUES (1, $1::jsonb, NOW())',
-            [JSON.stringify(startData)]
-        );
-        console.log('PostgreSQL is gevuld met de startdata uit db.json.');
-    } else {
-        console.log('PostgreSQL opslag actief.');
-    }
-}
-
-async function leesDB() {
-    if (!pool) return leesLokaleDB();
-
-    const result = await pool.query('SELECT data FROM app_state WHERE id = 1');
-    if (result.rowCount === 0) return maakLegeDB();
-    return normaliseerDB(result.rows[0].data);
-}
-
-async function schrijfDB(data) {
-    const db = normaliseerDB(data);
-    if (!pool) {
-        schrijfLokaleDB(db);
-        return;
-    }
-
-    await pool.query(
-        'UPDATE app_state SET data = $1::jsonb, updated_at = NOW() WHERE id = 1',
-        [JSON.stringify(db)]
-    );
-}
-
-async function wijzigDB(callback) {
-    if (!pool) {
-        const db = leesLokaleDB();
-        const resultaat = await callback(db);
-        schrijfLokaleDB(db);
-        return resultaat;
-    }
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const result = await client.query('SELECT data FROM app_state WHERE id = 1 FOR UPDATE');
-        const db = normaliseerDB(result.rows[0]?.data || maakLegeDB());
-        const resultaat = await callback(db);
-        await client.query(
-            'UPDATE app_state SET data = $1::jsonb, updated_at = NOW() WHERE id = 1',
-            [JSON.stringify(db)]
-        );
-        await client.query('COMMIT');
-        return resultaat;
-    } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-    } finally {
-        client.release();
-    }
-}
-
-function getISOWeeknummer(datum) {
-    const d = new Date(Date.UTC(datum.getFullYear(), datum.getMonth(), datum.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-
-function berekenSpelerSaldiServer(db, type) {
-    const saldi = {};
-    db.spelers
-        .filter(s => s.type === type && s.actief)
-        .forEach(s => {
-            saldi[s.id] = { sets: 0, punten: 0 };
-        });
-
-    db.wedstrijden
-        .filter(w => w.type === type && Array.isArray(w.sets))
-        .forEach(w => {
-            if(!saldi[w.spelerAId]) saldi[w.spelerAId] = { sets: 0, punten: 0 };
-            if(!saldi[w.spelerBId]) saldi[w.spelerBId] = { sets: 0, punten: 0 };
-
-            w.sets.forEach(set => {
-                const a = Number(set.a);
-                const b = Number(set.b);
-                if(Number.isNaN(a) || Number.isNaN(b)) return;
-                if(a > b) {
-                    saldi[w.spelerAId].sets += 1;
-                    saldi[w.spelerBId].sets -= 1;
-                } else if(b > a) {
-                    saldi[w.spelerBId].sets += 1;
-                    saldi[w.spelerAId].sets -= 1;
-                }
-                saldi[w.spelerAId].punten += (a - b);
-                saldi[w.spelerBId].punten += (b - a);
-            });
-        });
-
-    return saldi;
-}
-
-function bepaalActueleRanglijst(db, type) {
-    const saldi = berekenSpelerSaldiServer(db, type);
-    return db.spelers
-        .filter(s => s.type === type && s.actief)
-        .map(s => ({
-            ...s,
-            setsSaldo: saldi[s.id]?.sets || 0,
-            puntenSaldo: saldi[s.id]?.punten || 0
-        }))
-        .sort((a, b) =>
-            b.punten - a.punten ||
-            b.setsSaldo - a.setsSaldo ||
-            b.puntenSaldo - a.puntenSaldo ||
-            b.elo - a.elo ||
-            a.naam.localeCompare(b.naam)
-        );
-}
-
-function bepaalPositie(ranglijst, spelerId) {
-    const index = ranglijst.findIndex(s => s.id === spelerId);
-    return index === -1 ? 999 : index + 1;
-}
-
-
-function controleerWedstrijdSets(sets) {
-    if (!Array.isArray(sets) || sets.length === 0) {
-        throw new Error('Vul de setstanden in.');
-    }
-
-    let setsA = 0;
-    let setsB = 0;
-    let wedstrijdBeslist = false;
-
-    sets.forEach((set, index) => {
-        if (wedstrijdBeslist) {
-            throw new Error('Er zijn setstanden ingevuld nadat de wedstrijd al beslist was. Controleer de setstanden.');
-        }
-
-        const a = Number(set.a);
-        const b = Number(set.b);
-
-        if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0) {
-            throw new Error(`Set ${index + 1} bevat geen geldige stand.`);
-        }
-        if (a === b) {
-            throw new Error(`Set ${index + 1} kan niet gelijk eindigen.`);
-        }
-
-        if (a > b) setsA++;
-        else setsB++;
-
-        if (setsA === 3 || setsB === 3) wedstrijdBeslist = true;
-    });
-
-    if (setsA !== 3 && setsB !== 3) {
-        throw new Error('Opslaan kan pas wanneer één speler drie sets heeft gewonnen.');
-    }
-    if (setsA === 3 && setsB === 3) {
-        throw new Error('Controleer de setstanden: beide spelers kunnen niet drie sets winnen.');
-    }
-
-    return { setsA, setsB };
-}
-
-function draaiPuntenMutatieTerug(db, wedstrijd) {
-    const spelerA = db.spelers.find(s => s.id === wedstrijd.spelerAId);
-    const spelerB = db.spelers.find(s => s.id === wedstrijd.spelerBId);
-
-    if (spelerA && typeof wedstrijd.puntenMutatieA === 'number') {
-        spelerA.punten -= wedstrijd.puntenMutatieA;
-    }
-    if (spelerB && typeof wedstrijd.puntenMutatieB === 'number') {
-        spelerB.punten -= wedstrijd.puntenMutatieB;
-    }
-}
-
-function bouwWedstrijdEnPasPuntenToe(db, payload, bestaandId = null) {
-    const { competitieId, spelerAId, spelerBId, sets, type, gekozenDatum } = payload;
-    const setControle = controleerWedstrijdSets(sets);
-
-    const wedstrijdDatum = gekozenDatum ? new Date(gekozenDatum) : new Date();
-    const weekVanWedstrijd = getISOWeeknummer(wedstrijdDatum);
-    const geformatteerdeDatum = wedstrijdDatum.toISOString().split('T')[0];
-
-    const spelerA = db.spelers.find(s => s.id === spelerAId);
-    const spelerB = db.spelers.find(s => s.id === spelerBId);
-
-    if (!spelerA || !spelerB) {
-        throw new Error('Een van de spelers kon niet worden gevonden.');
-    }
-    if (spelerAId === spelerBId) {
-        throw new Error('Selecteer twee verschillende spelers.');
-    }
-
-    const actueleRanglijst = bepaalActueleRanglijst(db, type);
-    const positieVoorA = bepaalPositie(actueleRanglijst, spelerAId);
-    const positieVoorB = bepaalPositie(actueleRanglijst, spelerBId);
-
-    const puntenVoorA = spelerA.punten;
-    const puntenVoorB = spelerB.punten;
-    let puntenMutatieA = 0;
-    let puntenMutatieB = 0;
-
-    const berekendeWinnaarId = setControle.setsA > setControle.setsB ? spelerAId : spelerBId;
-    const berekendeUitslag = `${setControle.setsA} - ${setControle.setsB}`;
-    const berekendeSetstanden = sets.map(s => `${s.a}-${s.b}`).join(', ');
-
-    if (berekendeWinnaarId === spelerAId) {
-        puntenMutatieA = 1;
-        if (positieVoorA > positieVoorB) {
-            puntenMutatieA += 1;
-            puntenMutatieB -= 1;
-        }
-    } else if (berekendeWinnaarId === spelerBId) {
-        puntenMutatieB = 1;
-        if (positieVoorB > positieVoorA) {
-            puntenMutatieB += 1;
-            puntenMutatieA -= 1;
-        }
-    } else {
-        throw new Error('Winnaar kon niet worden bepaald.');
-    }
-
-    spelerA.punten += puntenMutatieA;
-    spelerB.punten += puntenMutatieB;
-
-    return {
-        id: bestaandId || ('w_' + Date.now()),
-        competitieId,
-        week: weekVanWedstrijd,
-        datum: geformatteerdeDatum,
-        spelerAId,
-        spelerBId,
-        sets,
-        uitslag: berekendeUitslag,
-        setstanden: berekendeSetstanden,
-        winnaarId: berekendeWinnaarId,
-        type,
-        positieVoorA,
-        positieVoorB,
-        puntenVoorA,
-        puntenVoorB,
-        puntenMutatieA,
-        puntenMutatieB,
-        puntenNaA: spelerA.punten,
-        puntenNaB: spelerB.punten
-    };
-}
-
-app.post('/api/login', async (req, res) => {
-    const db = await leesDB();
-    const username = String(req.body.username || '').trim();
-    const password = String(req.body.password || '');
-
-    const beheerders = Array.isArray(db.beheerders) ? db.beheerders : [];
-    const adminAccount = beheerders.find(b =>
-        String(b.username || '').trim() === username && String(b.password || '') === password
-    );
-
-    if (adminAccount) {
-        return res.json({ success: true, role: 'admin', displayName: username });
-    }
-
-    const spelerAccount = db.spelerLogin || {};
-    const spelerUsername = String(spelerAccount.username || 'speler').trim();
-    const spelerPassword = String(spelerAccount.password || 'speler');
-
-    const standaardSpelerLogin = username === 'speler' && password === 'speler';
-    const ingesteldeSpelerLogin = username === spelerUsername && password === spelerPassword;
-
-    if (standaardSpelerLogin || ingesteldeSpelerLogin) {
-        return res.json({ success: true, role: 'speler', displayName: username });
-    }
-
-    res.json({ success: false });
-});
-
-app.get('/api/data', async (req, res) => {
-    const db = await leesDB();
-    db.huidigeWeekServer = getISOWeeknummer(new Date());
-    res.json(db);
-});
-
-app.post('/api/wedstrijden', async (req, res) => {
-    try {
-        const nieuweWedstrijd = await wijzigDB(async (db) => {
-            const wedstrijd = bouwWedstrijdEnPasPuntenToe(db, req.body);
-            db.wedstrijden.unshift(wedstrijd);
-            return wedstrijd;
-        });
-        res.json({ success: true, wedstrijd: nieuweWedstrijd });
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-});
-
-app.put('/api/wedstrijden/:id', async (req, res) => {
-    try {
-        const aangepasteWedstrijd = await wijzigDB(async (db) => {
-            const index = db.wedstrijden.findIndex(w => w.id === req.params.id);
-            if (index === -1) throw new Error('Wedstrijd niet gevonden.');
-
-            const oudeWedstrijd = db.wedstrijden[index];
-            draaiPuntenMutatieTerug(db, oudeWedstrijd);
-            const wedstrijd = bouwWedstrijdEnPasPuntenToe(db, req.body, oudeWedstrijd.id);
-            db.wedstrijden[index] = wedstrijd;
-            return wedstrijd;
-        });
-        res.json({ success: true, wedstrijd: aangepasteWedstrijd });
-    } catch (err) {
-        const status = err.message === 'Wedstrijd niet gevonden.' ? 404 : 400;
-        res.status(status).json({ error: err.message });
-    }
-});
-
-app.delete('/api/wedstrijden/:id', async (req, res) => {
-    try {
-        await wijzigDB(async (db) => {
-            const index = db.wedstrijden.findIndex(w => w.id === req.params.id);
-            if (index === -1) throw new Error('Wedstrijd niet gevonden.');
-
-            const [wedstrijd] = db.wedstrijden.splice(index, 1);
-            draaiPuntenMutatieTerug(db, wedstrijd);
-        });
-        res.json({ success: true });
-    } catch (err) {
-        const status = err.message === 'Wedstrijd niet gevonden.' ? 404 : 400;
-        res.status(status).json({ error: err.message });
-    }
-});
-
-app.post('/api/competities/actie', async (req, res) => {
-    try {
-        await wijzigDB(async (db) => {
-            const { actie, competitieId, extra } = req.body;
-
-            if (actie === 'nieuw') {
-                const id = extra.naam.toLowerCase().replace(/ /g, '-');
-                db.competities.filter(c => c.type === extra.type).forEach(c => c.status = 'Gearchiveerd');
-                db.competities.push({
-                    id,
-                    naam: extra.naam,
-                    type: extra.type,
-                    status: 'Actief',
-                    huidigeWeek: getISOWeeknummer(new Date())
-                });
-                db.spelers.forEach(s => { if(s.type === extra.type) s.punten = 0; });
-            } else if (actie === 'reset-punten') {
-                const comp = db.competities.find(c => c.id === competitieId);
-                if(comp) {
-                    db.spelers.forEach(s => { if(s.type === comp.type) s.punten = 0; });
-                }
-            } else if (actie === 'competitie-verwijder') {
-                db.competities = db.competities.filter(c => c.id !== competitieId);
-            } else if (actie === 'competitie-wijzig-naam') {
-                const comp = db.competities.find(c => c.id === competitieId);
-                if (!comp) throw new Error('Competitie niet gevonden.');
-                if (!extra || !extra.naam || !String(extra.naam).trim()) throw new Error('Voer een naam in.');
-                comp.naam = String(extra.naam).trim();
-            } else if (actie === 'speler-nieuw') {
-                db.spelers.push({ id: 's_' + Date.now(), naam: extra.naam, type: extra.type, punten: extra.punten, elo: extra.elo, actief: true });
-            } else if (actie === 'speler-wijzig') {
-                const speler = db.spelers.find(s => s.id === extra.id);
-                if(speler) { speler.naam = extra.naam; speler.type = extra.type; speler.elo = extra.elo; speler.punten = extra.punten; }
-            } else if (actie === 'speler-verwijder') {
-                const speler = db.spelers.find(s => s.id === extra.id);
-                if(speler) speler.actief = false;
-            } else if (actie === 'beheerder-nieuw') {
-                if(!db.beheerders.find(b => b.username === extra.user)) db.beheerders.push({ username: extra.user, password: extra.pass });
-            } else if (actie === 'beheerder-verwijder') {
-                db.beheerders = db.beheerders.filter(b => b.username !== extra.user);
+        @media (max-width: 1100px) {
+            .dashboard-split-container,
+            .ranglijst-split-container {
+                grid-template-columns: 1fr;
+                gap: 18px;
             }
-        });
+        }
 
-        res.json({ success: true });
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-});
+        @media (max-width: 768px) {
+            body {
+                display: block;
+                height: auto;
+                min-height: 100vh;
+                overflow: auto;
+                font-size: 15px;
+            }
+            .login-overlay {
+                padding: 14px;
+                align-items: flex-start;
+                overflow-y: auto;
+            }
+            .login-card {
+                max-width: 100%;
+                padding: 22px;
+                margin-top: 16px;
+            }
+            .login-logo {
+                width: 82px;
+            }
+            .sidebar {
+                width: 100%;
+                min-height: auto;
+                position: sticky;
+                top: 0;
+                z-index: 5000;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+            }
+            .logo-area {
+                display: grid;
+                grid-template-columns: 58px 1fr auto;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                text-align: left;
+            }
+            .logo-img {
+                width: 52px;
+                margin-bottom: 0;
+            }
+            .logo-area h2 {
+                font-size: 15px;
+                line-height: 1.15;
+            }
+            .logo-area p {
+                font-size: 9px;
+            }
+            .mobile-menu-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 42px;
+                height: 40px;
+            }
+            .nav-menu {
+                display: none;
+                flex-direction: column;
+                margin-top: 0;
+                max-height: calc(100vh - 68px);
+                overflow-y: auto;
+            }
+            .nav-menu.mobile-open {
+                display: flex;
+            }
+            .nav-menu .nav-item {
+                flex: none;
+                width: 100%;
+                justify-content: flex-start;
+                padding: 13px 18px;
+                gap: 10px;
+                font-size: 15px;
+                margin-top: 0 !important;
+            }
+            .nav-admin-only {
+                border-left: none;
+                border-top: 3px solid #ffcc00;
+            }
+            .sidebar-copyright {
+                width: 100%;
+                text-align: left;
+                padding: 10px 18px;
+                background: #062b5e;
+            }
+            .main-content {
+                min-height: auto;
+                overflow: visible;
+            }
+            .header {
+                padding: 12px 14px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+            .header h2 {
+                font-size: 18px;
+                line-height: 1.25;
+            }
+            .view-container {
+                padding: 12px;
+            }
+            .dashboard-grid,
+            .dashboard-split-container,
+            .ranglijst-split-container {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                margin-top: 12px;
+            }
+            .card {
+                padding: 12px;
+                margin-bottom: 12px;
+                overflow-x: auto;
+                border-radius: 8px;
+            }
+            .card h3 {
+                font-size: 12px;
+                margin-bottom: 8px;
+            }
+            .card .value {
+                font-size: 19px;
+            }
+            table {
+                min-width: 420px;
+                font-size: 13px;
+                margin-bottom: 12px;
+            }
+            #dash-top5-table-body,
+            #ranglijst-table-body {
+                font-size: 13px;
+            }
+            th, td {
+                padding: 8px 6px;
+            }
+            .punten-kolom,
+            .punten-cel {
+                width: 64px;
+                padding-right: 12px;
+            }
+            .uitslag-kolom {
+                width: 165px;
+            }
+            .set-klein {
+                display: block;
+                margin-left: 0;
+                margin-top: 3px;
+                white-space: normal;
+                line-height: 1.25;
+            }
+            .uitslag-cel {
+                white-space: normal;
+            }
+            .tab-btn {
+                flex: 1 1 45%;
+                padding: 11px 8px;
+                font-size: 14px;
+            }
+            .btn {
+                width: 100%;
+                padding: 12px 14px;
+                font-size: 15px;
+            }
+            .btn-sm {
+                width: auto;
+                padding: 7px 10px;
+                font-size: 12px;
+            }
+            input, select {
+                font-size: 16px;
+                padding: 12px;
+            }
+            .actie-knoppen .btn-sm {
+                width: 100%;
+            }
+            .set-row {
+                gap: 6px;
+                flex-wrap: nowrap;
+                justify-content: space-between;
+            }
+            .set-row input {
+                width: 62px;
+                padding: 10px 6px;
+            }
+            .live-uitslag {
+                padding: 12px;
+                font-size: 14px;
+            }
+            .overzicht-acties {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .overzicht-acties .form-group {
+                width: 100%;
+            }
+            .modal-overlay {
+                align-items: flex-start;
+                padding: 8px;
+                overflow-y: auto;
+            }
+            .modal-content,
+            .modal-content.modal-breed {
+                width: 100%;
+                max-height: 96vh;
+                margin: 0;
+            }
+            .modal-header {
+                padding: 14px 16px;
+            }
+            .modal-header h2 {
+                font-size: 19px;
+                line-height: 1.25;
+            }
+            .modal-body {
+                padding: 14px;
+                overflow-x: auto;
+            }
+            .modal-tabs {
+                flex-wrap: wrap;
+            }
+            .speler-info {
+                font-size: 15px;
+            }
+            #speler-historie-table {
+                min-width: 620px;
+            }
+            .app-footer {
+                padding: 10px 14px;
+            }
+        }
 
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
-initOpslag()
-    .then(() => {
-        app.listen(PORT, () => console.log(`Server draait op poort ${PORT}`));
-    })
-    .catch((err) => {
-        console.error('Fout bij starten van de opslag:', err);
-        process.exit(1);
-    });
+
+
+        @media (max-width: 768px) {
+            .card { padding: 14px; }
+            th, td { padding: 8px 6px; font-size: 13px; }
+            .positie-kolom { width: 42px !important; }
+            .punten-kolom, .punten-cel { width: 58px !important; text-align: right; padding-right: 8px !important; }
+            .desktop-saldo { display: none !important; }
+            .desktop-label { display: none; }
+            .mobile-label { display: inline; }
+            .elo-kolom { width: 54px !important; }
+            .datum-kolom, .datum-cel { width: 74px !important; font-size: 12px; }
+            .uitslag-kolom, .uitslag-cel { width: 96px !important; min-width: 96px; white-space: normal; }
+            .set-klein { display: block; margin-left: 0; margin-top: 2px; font-size: 11px; line-height: 1.25; }
+            .wedstrijd-kolom, .wedstrijd-cel { min-width: 112px; width: 112px; }
+            .wedstrijd-cel .desktop-separator { display: none; }
+            .wedstrijd-cel .wedstrijd-speler { display: block; line-height: 1.25; }
+            .wedstrijd-cel .mobiel-streep { display: inline; }
+            .actie-kolom { width: 72px !important; }
+            .actie-knoppen { gap: 4px; }
+            .actie-knoppen .btn-sm { padding: 4px 6px; font-size: 11px; }
+            #dash-top5-table-body td:nth-child(1),
+            #ranglijst-table-body td:nth-child(1) { width: 42px; }
+            #dash-top5-table-body td:nth-child(3),
+            #ranglijst-table-body td:nth-child(3) { width: 58px; }
+            #dash-top5-table-body td:nth-child(4),
+            #ranglijst-table-body td:nth-child(4) { width: 54px; }
+            .dashboard-split-container .card,
+            .ranglijst-split-container .card { overflow-x: hidden; }
+            #dash-wedstrijden-table { table-layout: fixed; }
+            #dash-wedstrijden-table th:nth-child(1), #dash-wedstrijden-table td:nth-child(1) { width: 74px; }
+            #dash-wedstrijden-table th:nth-child(2), #dash-wedstrijden-table td:nth-child(2) { width: 112px; }
+            #dash-wedstrijden-table th:nth-child(3), #dash-wedstrijden-table td:nth-child(3) { width: 96px; }
+
+            #dash-wedstrijden-table .set-klein {
+                display: none !important;
+            }
+            #dash-wedstrijden-table .dashboard-punten-mobile {
+                display: block;
+                margin-left: 0;
+                line-height: 1.25;
+            }
+            #historie-table-body td:nth-child(1) { width: 74px; }
+            #historie-table-body td:nth-child(2) { width: 122px; }
+            #historie-table-body td:nth-child(3) { width: 96px; }
+            #historie-table-body td:nth-child(4) { width: 72px; }
+        }
+
+
+        @media (max-width: 768px) {
+            .compact-ranglijst-table {
+                width: 100% !important;
+                min-width: 0 !important;
+                table-layout: fixed;
+            }
+            .compact-ranglijst-table th,
+            .compact-ranglijst-table td {
+                padding: 7px 4px !important;
+                font-size: 12px !important;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .compact-ranglijst-table th:nth-child(1),
+            .compact-ranglijst-table td:nth-child(1) {
+                width: 44px !important;
+                text-align: left;
+            }
+            .compact-ranglijst-table th:nth-child(2),
+            .compact-ranglijst-table td:nth-child(2) {
+                width: auto !important;
+                white-space: normal;
+                word-break: break-word;
+            }
+            .compact-ranglijst-table th:nth-child(3),
+            .compact-ranglijst-table td:nth-child(3) {
+                width: 62px !important;
+                text-align: right !important;
+                padding-right: 6px !important;
+            }
+            .compact-ranglijst-table th:nth-child(4),
+            .compact-ranglijst-table td:nth-child(4),
+            .compact-ranglijst-table th:nth-child(5),
+            .compact-ranglijst-table td:nth-child(5) {
+                display: none !important;
+            }
+            .compact-ranglijst-table th:nth-child(6),
+            .compact-ranglijst-table td:nth-child(6) {
+                width: 44px !important;
+                text-align: right !important;
+                padding-right: 2px !important;
+            }
+            .compact-ranglijst-table .trofee {
+                display: none;
+            }
+            .beheer-spelers-table {
+                width: 100% !important;
+                min-width: 0 !important;
+                table-layout: fixed;
+            }
+            .beheer-spelers-table th,
+            .beheer-spelers-table td {
+                padding: 7px 4px !important;
+                font-size: 12px !important;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .beheer-spelers-table th:nth-child(1),
+            .beheer-spelers-table td:nth-child(1) {
+                width: auto !important;
+                white-space: normal;
+                word-break: break-word;
+            }
+            .beheer-spelers-table th:nth-child(2),
+            .beheer-spelers-table td:nth-child(2) {
+                width: 58px !important;
+                text-align: right !important;
+                padding-right: 6px !important;
+            }
+            .beheer-spelers-table th:nth-child(3),
+            .beheer-spelers-table td:nth-child(3) {
+                width: 42px !important;
+                text-align: right !important;
+                padding-right: 2px !important;
+            }
+            .beheer-spelers-table th:nth-child(4),
+            .beheer-spelers-table td:nth-child(4) {
+                width: 66px !important;
+                white-space: nowrap;
+                text-align: right;
+            }
+            .beheer-spelers-table .btn-sm {
+                width: auto !important;
+                padding: 4px 5px !important;
+                font-size: 11px !important;
+                margin: 0 1px;
+            }
+            .dashboard-split-container .card,
+            .ranglijst-split-container .card {
+                overflow-x: hidden;
+            }
+        }
+
+
+        @media (min-width: 769px) {
+            .beheer-comp-table .actie-kolom,
+            .beheer-comp-table td.comp-acties {
+                width: 132px;
+                white-space: nowrap;
+            }
+            .beheer-comp-table .actie-knoppen .btn-sm {
+                width: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tab-row {
+                gap: 10px;
+                margin-bottom: 14px;
+            }
+            .tab-row .tab-btn {
+                background: #e0e0e0;
+                color: #333;
+            }
+            .tab-row .tab-btn.active {
+                background: #0a3d82;
+                color: #fff;
+            }
+            .beheer-comp-table {
+                min-width: 0 !important;
+                width: 100% !important;
+                box-shadow: none;
+                background: transparent;
+                border-radius: 0;
+            }
+            .beheer-comp-table thead {
+                display: none;
+            }
+            .beheer-comp-table tr {
+                display: block;
+                background: #fff;
+                border: 1px solid #eee;
+                border-radius: 8px;
+                margin-bottom: 12px;
+                padding: 12px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+            .beheer-comp-table td {
+                display: block;
+                width: 100% !important;
+                border-bottom: none;
+                padding: 2px 0 !important;
+                font-size: 13px !important;
+                white-space: normal !important;
+            }
+            .beheer-comp-table td.comp-naam {
+                font-weight: 700;
+                color: #333;
+                font-size: 14px !important;
+                margin-bottom: 4px;
+            }
+            .beheer-comp-table td.comp-type,
+            .beheer-comp-table td.comp-status {
+                color: #555;
+            }
+            .beheer-comp-table td.comp-type::before {
+                content: "Type: ";
+                font-weight: 600;
+            }
+            .beheer-comp-table td.comp-status::before {
+                content: "Status: ";
+                font-weight: 600;
+            }
+            .beheer-comp-table td.comp-acties {
+                margin-top: 18px;
+                padding-top: 10px !important;
+                border-top: 1px solid #eee;
+            }
+            .beheer-comp-table td.comp-acties::before {
+                content: "Acties";
+                display: block;
+                font-weight: 700;
+                color: #555;
+                margin-bottom: 10px;
+            }
+            .beheer-comp-table .actie-knoppen {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .beheer-comp-table .actie-knoppen .btn-sm {
+                width: auto !important;
+                min-width: 42px;
+                padding: 8px 10px !important;
+                font-size: 13px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="login-screen" class="login-overlay">
+        <div class="login-card">
+            <img src="logo.png" class="login-logo" alt="Logo TTV Het Nootwheer">
+            <h2 style="margin-bottom: 5px; color:#0a3d82;">TTV Het Nootwheer</h2>
+            <p style="color:#666; font-size:14px; margin-bottom:20px;">Laddercompetitie Interface</p>
+            <div class="form-group" style="text-align:left;"><label>Gebruikersnaam</label><input type="text" id="login-username" value="speler"></div>
+            <div class="form-group" style="text-align:left; margin-bottom:12px;"><label>Toegangscode / wachtwoord</label><input type="password" id="login-password" value="speler"></div>
+            <p style="color:#777; font-size:12px; margin-bottom:18px;">Log in als speler of beheerder.</p>
+            <button class="btn" style="width:100%; padding:12px;" onclick="behandelInloggen()">Inloggen</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="logo-area">
+            <img src="logo.png" class="logo-img" alt="Logo TTV Het Nootwheer">
+            <div class="logo-text">
+                <h2>TTV Het Nootwheer</h2>
+                <p>LADDERCOMPETITIE</p>
+            </div>
+            <button type="button" class="mobile-menu-btn" onclick="document.querySelector('.nav-menu').classList.toggle('mobile-open')" aria-label="Menu openen of sluiten"><i class="fa-solid fa-bars"></i></button>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item active" onclick="switchView('dashboard')"><i class="fa-solid fa-gauge"></i> Dashboard</li>
+            <li class="nav-item" onclick="switchView('ranglijst')"><i class="fa-solid fa-list-ol"></i> Ranglijst</li>
+            <li class="nav-item" onclick="switchView('invoeren')"><i class="fa-solid fa-circle-plus"></i> Wedstrijd invoeren</li>
+            <li class="nav-item" onclick="switchView('historie')"><i class="fa-solid fa-history"></i> Historie</li>
+            <li class="nav-item nav-admin-only" id="menu-beheer-spelers" onclick="switchView('beheer-spelers')"><i class="fa-solid fa-users-cog"></i> Spelersbeheer</li>
+            <li class="nav-item nav-admin-only" id="menu-beheer-comp" onclick="switchView('beheer-competities')"><i class="fa-solid fa-cogs"></i> Competitiebeheer</li>
+            <li class="nav-item" style="margin-top:auto;" onclick="toggleHelpmenu()"><i class="fa-solid fa-circle-info"></i> Spelregels</li>
+            <li class="nav-item" style="background:#666;" onclick="uitloggen()"><i class="fa-solid fa-sign-out-alt"></i> Uitloggen</li>
+            <li class="sidebar-copyright">© John Veerman</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h2 id="current-view-title">TTV Het Nootwheer Laddercompetitie</h2>
+            <div id="rol-indicator" style="font-weight:bold; color:#0a3d82;"><i class="fa-solid fa-user"></i> Speler Modus</div>
+        </div>
+
+        <div id="view-dashboard" class="view-container active">
+            <div class="tab-row">
+                <button id="tab-dash-senioren" class="tab-btn active" onclick="wisselDashboardTab('Senioren')">Senioren</button>
+                <button id="tab-dash-jeugd" class="tab-btn" onclick="wisselDashboardTab('Jeugd')">Jeugd</button>
+            </div>
+            <div class="dashboard-grid">
+                <div class="card"><h3>Actieve competitie</h3><div class="value" id="dash-comp">-</div></div>
+                <div class="card"><h3>Huidig Weeknummer</h3><div class="value" id="dash-week">-</div></div>
+                <div class="card"><h3>Aantal actieve spelers</h3><div class="value" id="dash-spelers">-</div></div>
+            </div>
+            <div class="dashboard-split-container">
+                <div class="card" style="margin-bottom:0;">
+                    <h3><i class="fa-solid fa-list-ol"></i> Ranglijst</h3>
+                    <table class="compact-ranglijst-table">
+                        <thead><tr><th class="positie-kolom">Pos</th><th>Naam</th><th class="punten-kolom"><span class="desktop-label">Ladderpunten</span><span class="mobile-label">Punten</span></th><th class="saldo-kolom desktop-saldo">Sets</th><th class="saldo-kolom desktop-saldo">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
+                        <tbody id="dash-top5-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="card" style="margin-bottom:0;">
+                    <h3><i class="fa-solid fa-history"></i> Laatste Wedstrijden (Aflopend)</h3>
+                    <table id="dash-wedstrijden-table">
+                        <thead><tr><th class="datum-kolom">Datum</th><th class="wedstrijd-kolom">Wedstrijd</th><th class="uitslag-kolom">Uitslag</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-ranglijst" class="view-container">
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="tab-rang-senioren" class="tab-btn active" onclick="wisselRanglijstTab('Senioren')">Senioren Ranglijst</button>
+                <button id="tab-rang-jeugd" class="tab-btn" onclick="wisselRanglijstTab('Jeugd')">Jeugd Ranglijst</button>
+            </div>
+            <div class="card">
+                <div class="overzicht-acties">
+                    <div class="form-group">
+                        <label>Overzichtdatum</label>
+                        <input type="date" id="overzicht-datum">
+                    </div>
+                    <button class="btn" style="background:#137333;" onclick="deelZichtbareRanglijstViaWhatsapp()"><i class="fa-brands fa-whatsapp"></i> Deel zichtbare ranglijst</button>
+                </div>
+            </div>
+            <div class="card" style="margin-bottom:0;">
+                <h3 id="ranglijst-titel"><i class="fa-solid fa-list-ol"></i> Senioren Ranglijst</h3>
+                <table class="compact-ranglijst-table">
+                    <thead><tr><th class="positie-kolom">Positie</th><th>Naam</th><th class="punten-kolom"><span class="desktop-label">Ladderpunten</span><span class="mobile-label">Punten</span></th><th class="saldo-kolom desktop-saldo">Sets</th><th class="saldo-kolom desktop-saldo">Punten</th><th class="elo-kolom">ELO</th></tr></thead>
+                    <tbody id="ranglijst-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-invoeren" class="view-container">
+            <div class="card" style="max-width: 600px;">
+                <form id="wedstrijd-form" onsubmit="saveWedstrijd(event)">
+                    <input type="hidden" id="edit-wedstrijd-id">
+                    <div id="wedstrijd-edit-status" class="form-status"></div>
+                    <div class="form-group">
+                        <label>Kies Categorie</label>
+                        <div class="tab-row" style="margin-bottom:0;">
+                            <button type="button" id="tab-invoer-senioren" class="tab-btn active" onclick="wisselInvoerTab('Senioren')">Senioren</button>
+                            <button type="button" id="tab-invoer-jeugd" class="tab-btn" onclick="wisselInvoerTab('Jeugd')">Jeugd</button>
+                        </div>
+                        <select id="w-type" onchange="wisselInvoerType()" style="display:none;"><option value="Senioren">Senioren</option><option value="Jeugd">Jeugd</option></select>
+                    </div>
+                    <div class="form-group"><label>Datum van Wedstrijd</label><input type="date" id="w-datum"></div>
+                    <div class="form-group speler-zoek-wrapper">
+                        <label>Speler A</label>
+                        <input type="text" id="w-spelerA-zoek" list="spelersA-list" placeholder="Typ de naam van speler A" oninput="selecteerSpelerUitZoekveld('A')" onchange="selecteerSpelerUitZoekveld('A')" autocomplete="off">
+                        <datalist id="spelersA-list"></datalist>
+                        <input type="hidden" id="w-spelerA">
+                        <div class="speler-hint">Begin met typen en kies daarna de speler uit de lijst.</div>
+                        <div id="w-spelerA-waarschuwing" class="veld-waarschuwing">Kies een geldige speler uit de lijst.</div>
+                    </div>
+                    <div class="form-group speler-zoek-wrapper">
+                        <label>Speler B</label>
+                        <input type="text" id="w-spelerB-zoek" list="spelersB-list" placeholder="Typ de naam van speler B" oninput="selecteerSpelerUitZoekveld('B')" onchange="selecteerSpelerUitZoekveld('B')" autocomplete="off">
+                        <datalist id="spelersB-list"></datalist>
+                        <input type="hidden" id="w-spelerB">
+                        <div class="speler-hint">Begin met typen en kies daarna de speler uit de lijst.</div>
+                        <div id="w-spelerB-waarschuwing" class="veld-waarschuwing">Kies een geldige speler uit de lijst.</div>
+                    </div>
+                    <label style="font-weight:bold; display:block; margin-bottom:5px;">Setstanden (Vul 1 veld in, computer rekent door!)</label>
+                    <div id="set-inputs">
+                        <div class="set-row"><span>Set 1:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                        <div class="set-row"><span>Set 2:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                        <div class="set-row"><span>Set 3:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                        <div class="set-row"><span>Set 4:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                        <div class="set-row"><span>Set 5:</span><input type="number" class="set-a" placeholder="A" oninput="intellectueleSetBerekening(this, 'A')"><span>-</span><input type="number" class="set-b" placeholder="B" oninput="intellectueleSetBerekening(this, 'B')"></div>
+                    </div>
+                    <div class="live-uitslag" id="live-uitslag-box">Voer setstanden in...</div>
+                    <button type="submit" class="btn" id="wedstrijd-submit-btn" style="width:100%; margin-top:15px;">Wedstrijd opslaan en bevestigen</button>
+                    <button type="button" class="btn" id="wedstrijd-annuleer-btn" style="width:100%; margin-top:8px; background:#666; display:none;" onclick="annuleerWedstrijdEdit()">Wijzigen annuleren</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="view-historie" class="view-container">
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="tab-hist-senioren" class="tab-btn active" onclick="wisselHistorieTab('Senioren')">Senioren Historie</button>
+                <button id="tab-hist-jeugd" class="tab-btn" onclick="wisselHistorieTab('Jeugd')">Jeugd Historie</button>
+                <button class="btn" style="background:#137333;" onclick="deelZichtbareHistorieViaWhatsapp()"><i class="fa-brands fa-whatsapp"></i> Deel zichtbare historie</button>
+            </div>
+            <div class="card">
+                <table>
+                    <thead><tr><th class="datum-kolom">Datum</th><th class="wedstrijd-kolom">Wedstrijd</th><th class="uitslag-kolom">Uitslag</th><th class="saldo-kolom desktop-saldo">Sets</th><th class="saldo-kolom desktop-saldo">Punten</th><th class="actie-kolom">Acties</th></tr></thead>
+                    <tbody id="historie-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-beheer-spelers" class="view-container">
+            <div class="card" style="max-width: 500px;">
+                <h3 id="speler-form-titel">Nieuwe Speler Toevoegen</h3>
+                <input type="hidden" id="edit-speler-id">
+                <div class="form-group">
+                    <label>Type Ladder</label>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" id="tab-speler-form-senioren" class="tab-btn active" onclick="wisselSpelerFormType('Senioren')">Senioren</button>
+                        <button type="button" id="tab-speler-form-jeugd" class="tab-btn" onclick="wisselSpelerFormType('Jeugd')">Jeugd</button>
+                    </div>
+                    <select id="speler-type" style="display:none;"><option value="Senioren">Senioren</option><option value="Jeugd">Jeugd</option></select>
+                </div>
+                <div class="form-group"><label>Naam speler</label><input type="text" id="speler-naam" placeholder="Bijv. Henk Bakker"></div>
+                <div class="form-group"><label>Actueel Puntensaldo</label><input type="number" id="speler-punten" value="0"></div>
+                <div class="form-group"><label>ELO</label><input type="number" id="speler-elo" value="1500"></div>
+                <button class="btn" id="btn-speler-opslaan" onclick="saveSpeler()">Speler Opslaan</button>
+                <button class="btn" id="btn-speler-annuleren" style="background:#666; display:none;" onclick="annuleerSpelerEdit()">Annuleren</button>
+            </div>
+            <div class="card">
+                <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <button id="tab-beheer-spelers-senioren" class="tab-btn active" onclick="wisselBeheerSpelersTab('Senioren')">Senioren</button>
+                    <button id="tab-beheer-spelers-jeugd" class="tab-btn" onclick="wisselBeheerSpelersTab('Jeugd')">Jeugd</button>
+                </div>
+                <h3 id="beheer-spelers-lijst-titel">Actuele Senioren Spelerslijst (Alfabetisch op Naam)</h3>
+                <table class="beheer-spelers-table">
+                    <thead><tr><th>Naam</th><th class="punten-kolom">Punten</th><th class="elo-kolom">ELO</th><th class="actie-kolom">Acties</th></tr></thead>
+                    <tbody id="beheer-spelers-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-beheer-competities" class="view-container">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>Nieuwe Competitie Starten</h3>
+                    <div class="form-group" style="margin-top:10px;"><label>Naam</label><input type="text" id="new-comp-naam" placeholder="Bijv. Senioren Najaar 2026"></div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <div class="tab-row" style="margin-bottom:0;">
+                            <button type="button" id="tab-comp-form-senioren" class="tab-btn active" onclick="wisselCompetitieFormType('Senioren')">Senioren</button>
+                            <button type="button" id="tab-comp-form-jeugd" class="tab-btn" onclick="wisselCompetitieFormType('Jeugd')">Jeugd</button>
+                        </div>
+                        <select id="new-comp-type" style="display:none;"><option value="Senioren">Senioren</option><option value="Jeugd">Jeugd</option></select>
+                    </div>
+                    <button class="btn" onclick="beheerActie('nieuw')">Competitie Starten</button>
+                </div>
+                <div class="card">
+                    <h3>Extra Beheerder Toevoegen</h3>
+                    <div class="form-group" style="margin-top:10px;"><label>Gebruikersnaam</label><input type="text" id="new-admin-user" placeholder="Gebruikersnaam"></div>
+                    <div class="form-group"><label>Wachtwoord</label><input type="text" id="new-admin-pass" placeholder="Wachtwoord"></div>
+                    <button class="btn" onclick="voegBeheerderToe()">Beheerder Opslaan</button>
+                    <h4 style="margin-top:20px; font-size:13px; color:#555;">Actieve Beheerders:</h4>
+                    <ul id="beheerders-lijst" style="margin-top:10px; list-style:none; font-size:14px;"></ul>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Alle Competities & Beheer Acties</h3>
+                <table id="beheer-comp-table" class="beheer-comp-table">
+                    <thead><tr><th>Naam / omschrijving</th><th>Type</th><th>Status</th><th class="actie-kolom">Acties</th></tr></thead>
+                    <tbody id="beheer-comp-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="help-modal" class="modal-overlay" onclick="sluitHelpmenuExtern(event)">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Spelregels laddercompetitie</h2><button class="modal-close" onclick="toggleHelpmenu()">&times;</button></div>
+            <div class="modal-body">
+                <ul class="spelregels-lijst">
+                    <li>Bij de beginstand van een competitie wordt de ranglijst weergegeven op basis van ELO.</li>
+                    <li>Na het invoeren van de eerste wedstrijd wordt de ranglijst bepaald op basis van ladderpunten, daarna sets en daarna punten.</li>
+                    <li>Sets betekent: gewonnen sets min verloren sets.</li>
+                    <li>Punten betekent: alle gemaakte punten in de gespeelde sets min alle tegenpunten.</li>
+                    <li>Winst tegen een lager geplaatste speler: winnaar krijgt +1 ladderpunt, verliezer krijgt 0 ladderpunten.</li>
+                    <li>Winst tegen een hoger geplaatste speler: winnaar krijgt +2 ladderpunten, verliezer verliest 1 ladderpunt.</li>
+                </ul>
+                <p class="spelregels-disclaimer">De informatie op deze website is openbaar. De deelnemers aan de laddercompetitie stemmen ermee in dat deze informatie kan worden gezien en gedeeld door derden.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="speler-historie-modal" class="modal-overlay" onclick="sluitSpelerHistorieExtern(event)">
+        <div class="modal-content modal-breed">
+            <div class="modal-header"><h2 id="speler-historie-titel">Wedstrijdhistorie</h2><button class="modal-close" onclick="sluitSpelerHistorie()">&times;</button></div>
+            <div class="modal-body">
+                <div class="modal-tabs">
+                    <button id="tab-spelerhist-senioren" class="tab-btn active" onclick="wisselSpelerHistorieTab('Senioren')">Seniorenladder</button>
+                    <button id="tab-spelerhist-jeugd" class="tab-btn" onclick="wisselSpelerHistorieTab('Jeugd')">Jeugdladder</button>
+                </div>
+                <div id="speler-historie-info" class="speler-info"></div>
+                <div style="margin-bottom:16px;"><button class="btn" style="background:#137333;" onclick="deelSpelerHistorieViaWhatsapp()"><i class="fa-brands fa-whatsapp"></i> Deel deze wedstrijdhistorie</button></div>
+                <table id="speler-historie-table">
+                    <thead><tr><th>Datum</th><th>Week</th><th>Tegenstander</th><th>Uitslag</th><th>W/V</th><th>Punten</th></tr></thead>
+                    <tbody id="speler-historie-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
