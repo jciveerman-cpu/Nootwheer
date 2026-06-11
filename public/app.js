@@ -261,6 +261,18 @@ function wisselBeheerSpelersTab(type) {
 }
 
 
+function getActieveCompetitieId(type) {
+    const comp = appData.competities?.find(c => c.status === 'Actief' && c.type === type);
+    return comp ? comp.id : null;
+}
+
+function hoortWedstrijdBijActieveCompetitie(w, type) {
+    if(!w || w.status === 'verwijderd') return false;
+    if(w.type !== type) return false;
+    const actieveId = getActieveCompetitieId(type);
+    return !actieveId || !w.competitieId || w.competitieId === actieveId;
+}
+
 function berekenSpelerSaldi(type) {
     const saldi = {};
     appData.spelers
@@ -270,7 +282,7 @@ function berekenSpelerSaldi(type) {
         });
 
     appData.wedstrijden
-        .filter(w => w.type === type && Array.isArray(w.sets))
+        .filter(w => hoortWedstrijdBijActieveCompetitie(w, type) && Array.isArray(w.sets))
         .forEach(w => {
             if(!saldi[w.spelerAId]) saldi[w.spelerAId] = { sets: 0, punten: 0 };
             if(!saldi[w.spelerBId]) saldi[w.spelerBId] = { sets: 0, punten: 0 };
