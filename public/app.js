@@ -273,6 +273,10 @@ function hoortWedstrijdBijActieveCompetitie(w, type) {
     return !actieveId || !w.competitieId || w.competitieId === actieveId;
 }
 
+function heeftActieveWedstrijdenVoorType(type) {
+    return appData.wedstrijden.some(w => hoortWedstrijdBijActieveCompetitie(w, type));
+}
+
 function berekenSpelerSaldi(type) {
     const saldi = {};
     appData.spelers
@@ -894,16 +898,19 @@ function keerUitslagOm(uitslag) {
 
 function getGesorteerdeSpelers(type) {
     const saldi = berekenSpelerSaldi(type);
+    const gebruikElo = !heeftActieveWedstrijdenVoorType(type);
     return appData.spelers
         .filter(s => s.type === type && s.actief)
         .map(s => verrijkSpelerMetSaldi(s, saldi))
-        .sort((a, b) =>
-            b.punten - a.punten ||
-            b.setsSaldo - a.setsSaldo ||
-            b.puntenSaldo - a.puntenSaldo ||
-            b.elo - a.elo ||
-            a.naam.localeCompare(b.naam)
-        );
+        .sort((a, b) => {
+            const basisSortering =
+                b.punten - a.punten ||
+                b.setsSaldo - a.setsSaldo ||
+                b.puntenSaldo - a.puntenSaldo;
+            if(basisSortering !== 0) return basisSortering;
+            if(gebruikElo) return b.elo - a.elo || a.naam.localeCompare(b.naam);
+            return a.naam.localeCompare(b.naam);
+        });
 }
 
 function getOverzichtDatum() {
